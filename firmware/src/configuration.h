@@ -1,0 +1,28 @@
+#ifndef CONFIGURATION_H
+#define CONFIGURATION_H
+
+// OLED
+#define SCREEN_WIDTH            128
+#define SCREEN_HEIGHT           64
+#define I2C_SDA                 21
+#define I2C_SCL                 22
+#define SH1106_ADDRESS          0x3C
+
+// Encoder
+#define DI_ENCODER_A            GPIO_NUM_35
+#define DI_ENCODER_B            GPIO_NUM_34
+#define DI_ENCODER_CON          GPIO_NUM_36
+#define DI_ENCODER_BACK         GPIO_NUM_39
+#define BUTTON_DEBOUNCE_MS      50
+
+// Keys
+#define ROW_PIN_1               GPIO_NUM_32
+#define ROW_PIN_2               GPIO_NUM_33
+#define ROW_PIN_3               GPIO_NUM_25
+#define ROW_PIN_4               GPIO_NUM_26
+#define COL_PIN_1               GPIO_NUM_23
+#define COL_PIN_2               GPIO_NUM_19
+#define COL_PIN_3               GPIO_NUM_18
+#define COL_PIN_4               GPIO_NUM_5
+
+#endif // CONFIGURATION_H

@@ -1,0 +1,4 @@
+bleak==0.22.2
+asyncio
+PyQt5==5.15.10
+qasync==0.24.2

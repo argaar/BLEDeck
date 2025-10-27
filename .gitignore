@@ -1,0 +1,10 @@
+windows_app/__pycache__
+windows_app/.claude
+windows_app/env
+
+firmware/.pio
+firmware/.vscode
+firmware/env
+
+assets
+docs

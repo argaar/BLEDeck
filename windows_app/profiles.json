@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Default",
+    "actions": {
+      "0": "notepad.exe",
+      "1": "calc.exe",
+      "2": "explorer.exe",
+      "3": "notepad.exe"
+    }
+  },
+  {
+    "name": "Development",
+    "actions": {
+      "0": "code .",
+      "1": "cmd",
+      "2": "git status",
+      "3": "calc.exe"
+    }
+  }
+]
