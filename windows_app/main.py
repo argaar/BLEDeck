@@ -31,23 +31,7 @@ class KeyButton(QPushButton):
                 # Find the best split point (closest to middle)
                 words = self.key_label.split(' ')
                 if len(words) >= 2:
-                    # Try to split roughly in the middle
-                    mid_point = len(self.key_label) // 2
-                    current_length = 0
-                    split_index = 0
-
-                    for i, word in enumerate(words[:-1]):  # Don't split after last word
-                        current_length += len(word) + 1  # +1 for space
-                        if current_length >= mid_point:
-                            split_index = i + 1
-                            break
-
-                    if split_index > 0:
-                        line1 = ' '.join(words[:split_index])
-                        line2 = ' '.join(words[split_index:])
-                        self.setText(f"{self.key_number}\n{line1}\n{line2}")
-                    else:
-                        self.setText(f"{self.key_number}\n{self.key_label}")
+                    self.setText(f"{self.key_number}\n{'\n'.join(words)}")
                 else:
                     self.setText(f"{self.key_number}\n{self.key_label}")
             else:
@@ -245,7 +229,7 @@ class BLEDeckGUI(QMainWindow):
         return group
     
     def create_key_panel(self):
-        group = QGroupBox("Key Layout (0-9, A-F)")
+        group = QGroupBox("Key Layout")
         layout = QGridLayout(group)
         
         # Create 16 key buttons in a 4x4 grid
@@ -734,7 +718,6 @@ class BLEDeckGUI(QMainWindow):
         
         # Stop timers first
         self.ping_timer.stop()
-        self.connection_check_timer.stop()
         
         if self.ble_client:
             try:
@@ -990,8 +973,6 @@ class BLEDeckGUI(QMainWindow):
             self.ping_timer.stop()
         if hasattr(self, 'connect_timer'):
             self.connect_timer.stop()
-        if hasattr(self, 'connection_check_timer'):
-            self.connection_check_timer.stop()
 
         # Properly disconnect from device if connected
         if self.is_connected and self.ble_client:

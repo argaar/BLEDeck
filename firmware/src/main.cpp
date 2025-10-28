@@ -2,7 +2,9 @@
 #include <Keypad.h>
 #include <ESP32RotaryEncoder.h>
 #include <Bounce2.h>
-#include <oled.h>
+#include <Wire.h>
+#include "SSD1306Wire.h"
+#include "OLEDDisplay.h"
 #include <Preferences.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -20,13 +22,13 @@ String profileNames[MAX_PROFILES] = {"Default"};  // Initialize first profile, r
 int profileCount = 1;  // Track number of profiles received from app
 
 // OLED
-OLED* display;
+SSD1306Wire * display;
 
 void updateOLED(int profile) {
   display->clear();
   char profile_string[40];
   snprintf(profile_string, sizeof(profile_string), "Profile: %s", profileNames[profile]);
-  display->draw_string(2, 0, profile_string);
+  display->drawString(0, 0, profile_string);
   display->display();
   Serial.println(profile_string);
 }
@@ -171,10 +173,10 @@ class RxCallbacks : public BLECharacteristicCallbacks {
       String v = msg.substring(7);
       if (v == "1") {
         oledDimmed = true;
-        display->set_contrast(0x0);
+        display->setContrast(0);
       } else {
         oledDimmed = false;
-        display->set_contrast(0xBA);
+        display->setContrast(100);
         updateOLED(currentProfile);
       }
     }
@@ -233,8 +235,14 @@ void setup() {
   Serial.println("BLEDeck Firmware Starting...");
 
   // Oled
-  display = new OLED(I2C_SDA, I2C_SCL, NO_RESET_PIN, SH1106_ADDRESS, 128, 64, true);
-  display->begin();
+  display = new SSD1306Wire(SSD1306_ADDRESS, I2C_SDA, I2C_SCL);
+
+  display->init();
+  display->flipScreenVertically();
+
+  display->clear();
+  display->drawXbm((display->getWidth()-LOGO_IMAGE_WIDTH)/2, (display->getHeight()-LOGO_IMAGE_HEIGHT)/2, LOGO_IMAGE_WIDTH, LOGO_IMAGE_HEIGHT, LOGO_IMAGE);
+  display->display();
 
   // Keys
   keypad = new Keypad(makeKeymap(hexaKeys), rowPins, colPins, 4, 4);
@@ -323,17 +331,11 @@ void loop() {
   if (btn_encoder_con.pressed()){
     Serial.println("CON PRESSED");
     sendNotify("CON");
-    display->clear();
-    display->draw_rectangle(2, 0, 127, 63, OLED::SOLID);
-    display->display();
   }
 
   if (btn_encoder_back.pressed()){
     Serial.println("BACK PRESSED");
     sendNotify("BACK");
-    display->clear();
-    display->draw_bitmap_P((SCREEN_WIDTH - logo_width / 2) + 2, SCREEN_HEIGHT - logo_height / 2, logo_width, logo_height, logo);
-    display->display();
   }
 
   char key = keypad->getKey();

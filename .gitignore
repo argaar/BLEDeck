@@ -6,6 +6,7 @@ windows_app/profiles.json
 firmware/.pio
 firmware/.vscode
 firmware/env
+firmware/.gitignore
 
 assets
 docs

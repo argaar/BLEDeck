@@ -6,7 +6,7 @@
 #define SCREEN_HEIGHT           64
 #define I2C_SDA                 21
 #define I2C_SCL                 22
-#define SH1106_ADDRESS          0x3C
+#define SSD1306_ADDRESS         0x3C
 
 // Encoder
 #define DI_ENCODER_A            GPIO_NUM_35
