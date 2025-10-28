@@ -1,102 +1,177 @@
 import sys
 import asyncio
-import json
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
-                             QWidget, QLabel, QPushButton, QLineEdit, QComboBox, 
-                             QGridLayout, QGroupBox, QStatusBar, QFrame, QTextEdit,
-                             QFileDialog, QMessageBox, QCheckBox)
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject, QThread, pyqtSlot
-from PyQt5.QtGui import QPalette, QFont
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
+                             QWidget, QLabel, QPushButton, QLineEdit, QComboBox,
+                             QGridLayout, QGroupBox, QStatusBar, QTextEdit,
+                             QFileDialog, QMessageBox, QCheckBox, QColorDialog, QSlider)
+from PyQt5.QtCore import Qt, QTimer, pyqtSlot
+from PyQt5.QtGui import QColor, QIcon
 import qasync
-from qasync import QEventLoop
 
-from ble_client import BleakClient, DEVICE_NAME, SERVICE_UUID, CHAR_TX_UUID, CHAR_RX_UUID
+from ble_client import BleakClient, DEVICE_NAME, CHAR_TX_UUID, CHAR_RX_UUID
 from profile_manager import load_profiles, save_profiles
-
 
 class KeyButton(QPushButton):
     def __init__(self, key_id, text):
-        super().__init__(text)
+        super().__init__()
         self.key_id = key_id
-        self.setFixedSize(60, 60)
-        self.setStyleSheet("""
-            QPushButton {
-                background-color: #f0f0f0;
-                border: 2px solid #ccc;
-                border-radius: 5px;
-                font-weight: bold;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #e0e0e0;
-            }
-        """)
+        self.key_number = text
+        self.key_label = ""
+        self.key_color = None  # Store as (r, g, b, brightness)
+        self.setFixedSize(80, 80)
         self.is_active = False
-    
-    def set_active(self, active):
-        self.is_active = active
-        if active:
+        self.update_button_text()
+        self.update_button_style()
+
+    def update_button_text(self):
+        """Update the button text to show key number and label"""
+        if self.key_label:
+            # Split long labels with spaces into two lines
+            if len(self.key_label) > 10 and ' ' in self.key_label:
+                # Find the best split point (closest to middle)
+                words = self.key_label.split(' ')
+                if len(words) >= 2:
+                    # Try to split roughly in the middle
+                    mid_point = len(self.key_label) // 2
+                    current_length = 0
+                    split_index = 0
+
+                    for i, word in enumerate(words[:-1]):  # Don't split after last word
+                        current_length += len(word) + 1  # +1 for space
+                        if current_length >= mid_point:
+                            split_index = i + 1
+                            break
+
+                    if split_index > 0:
+                        line1 = ' '.join(words[:split_index])
+                        line2 = ' '.join(words[split_index:])
+                        self.setText(f"{self.key_number}\n{line1}\n{line2}")
+                    else:
+                        self.setText(f"{self.key_number}\n{self.key_label}")
+                else:
+                    self.setText(f"{self.key_number}\n{self.key_label}")
+            else:
+                self.setText(f"{self.key_number}\n{self.key_label}")
+        else:
+            self.setText(self.key_number)
+
+    def set_label(self, label):
+        """Set the label for this key"""
+        self.key_label = label
+        self.update_button_text()
+
+    def set_color(self, color_str):
+        """Set the color from a string like '220,0,0,70'"""
+        if color_str:
+            try:
+                parts = color_str.split(',')
+                if len(parts) == 4:
+                    r, g, b, brightness = map(int, parts)
+                    self.key_color = (r, g, b, brightness)
+                else:
+                    self.key_color = None
+            except:
+                self.key_color = None
+        else:
+            self.key_color = None
+        self.update_button_style()
+
+    def update_button_style(self):
+        """Update the button stylesheet based on color and active state"""
+        if self.is_active:
+            # Active state - use green
             self.setStyleSheet("""
                 QPushButton {
                     background-color: #4CAF50;
                     border: 2px solid #45a049;
                     border-radius: 5px;
                     font-weight: bold;
-                    font-size: 14px;
+                    font-size: 9px;
                     color: white;
                 }
             """)
+        elif self.key_color:
+            # Use the custom color with brightness
+            r, g, b, bri = self.key_color
+            # Apply brightness (0-100) as a brightness factor
+            brightness = bri / 100.0
+            r_adj = int(r * brightness)
+            g_adj = int(g * brightness)
+            b_adj = int(b * brightness)
+
+            # Calculate text color based on brightness (dark text for light backgrounds)
+            text_color = "black" if (r_adj + g_adj + b_adj) > 382 else "white"
+
+            self.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: rgb({r_adj}, {g_adj}, {b_adj});
+                    border: 2px solid rgb({max(0, r_adj-20)}, {max(0, g_adj-20)}, {max(0, b_adj-20)});
+                    border-radius: 5px;
+                    font-weight: bold;
+                    font-size: 9px;
+                    color: {text_color};
+                }}
+                QPushButton:hover {{
+                    background-color: rgb({min(255, r_adj+20)}, {min(255, g_adj+20)}, {min(255, b_adj+20)});
+                }}
+            """)
         else:
+            # Default gray style
             self.setStyleSheet("""
                 QPushButton {
                     background-color: #f0f0f0;
                     border: 2px solid #ccc;
                     border-radius: 5px;
                     font-weight: bold;
-                    font-size: 14px;
+                    font-size: 9px;
                 }
                 QPushButton:hover {
                     background-color: #e0e0e0;
                 }
             """)
 
+    def set_active(self, active):
+        self.is_active = active
+        self.update_button_style()
 
 class BLEDeckGUI(QMainWindow):
-    def __init__(self):
+    def __init__(self, quit_event):
         super().__init__()
-        self.setWindowTitle("BLE Deck Control Panel")
+        self.setWindowTitle("BLEDeck Control Panel")
         self.setGeometry(100, 100, 800, 600)
-        
+        self.setWindowIcon(QIcon("icon.ico"))
+
+        # Store quit event for proper shutdown
+        self.quit_event = quit_event
+
         # BLE connection state
         self.ble_client = None
         self.is_connected = False
         self.current_profile_index = 0
-        
+
         # Data
         self.profiles = load_profiles()
         self.key_buttons = {}
         self.key_actions = {}
-        
+
         # Setup UI
         self.setup_ui()
         self.load_current_profile()
-        
+
         # Setup timer for periodic ping
         self.ping_timer = QTimer()
         self.ping_timer.timeout.connect(self.send_ping)
-        
+
         # Auto-connect timer - start disabled, can be enabled via UI
         self.connect_timer = QTimer()
         self.connect_timer.timeout.connect(self.auto_connect)
         # Don't start auto-connect by default to prevent connection loops
-        
-        # Connection monitoring - disabled for now to prevent false disconnects
-        self.connection_check_timer = QTimer()
-        self.connection_check_timer.timeout.connect(self.check_connection_health)
-        
+
         # Last ping time for connection health
         self.last_ping_response = 0
         self.ping_timeout_count = 0
+
+        asyncio.create_task(self.connect())
     
     def setup_ui(self):
         central_widget = QWidget()
@@ -150,17 +225,23 @@ class BLEDeckGUI(QMainWindow):
         self.profile_name_input.setPlaceholderText("Profile name...")
         layout.addWidget(self.profile_name_input)
         
+        # New profile button
+        new_btn = QPushButton("New Profile")
+        new_btn.clicked.connect(self.create_new_profile)
+        new_btn.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; }")
+        layout.addWidget(new_btn)
+
         # Save profile button
         save_btn = QPushButton("Save Profile")
         save_btn.clicked.connect(self.save_current_profile)
         layout.addWidget(save_btn)
-        
+
         # Delete profile button
         delete_btn = QPushButton("Delete Profile")
         delete_btn.clicked.connect(self.delete_current_profile)
         delete_btn.setStyleSheet("QPushButton { background-color: #ff6b6b; color: white; }")
         layout.addWidget(delete_btn)
-        
+
         return group
     
     def create_key_panel(self):
@@ -184,63 +265,126 @@ class BLEDeckGUI(QMainWindow):
     def create_action_panel(self):
         group = QGroupBox("Action Configuration")
         layout = QVBoxLayout(group)
-        
+
         # Selected key display
         self.selected_key_label = QLabel("Selected Key: None")
         layout.addWidget(self.selected_key_label)
-        
-        # Action input
-        action_layout = QHBoxLayout()
-        action_layout.addWidget(QLabel("Action:"))
-        self.action_input = QLineEdit()
-        self.action_input.setPlaceholderText("Enter command or action...")
-        self.action_input.textChanged.connect(self.on_action_changed)
-        action_layout.addWidget(self.action_input)
-        
+
+        # Label input
+        label_layout = QHBoxLayout()
+        label_layout.addWidget(QLabel("Label:"))
+        self.label_input = QLineEdit()
+        self.label_input.setPlaceholderText("Enter key label...")
+        self.label_input.textChanged.connect(self.on_label_changed)
+        label_layout.addWidget(self.label_input)
+        layout.addLayout(label_layout)
+
+        # Color input with picker
+        color_layout = QHBoxLayout()
+        color_layout.addWidget(QLabel("Color:"))
+        self.color_input = QLineEdit()
+        self.color_input.setPlaceholderText("e.g., 220,0,0,70")
+        self.color_input.textChanged.connect(self.on_color_changed)
+        color_layout.addWidget(self.color_input)
+
+        # Color picker button
+        self.color_picker_btn = QPushButton("Pick Color")
+        self.color_picker_btn.clicked.connect(self.open_color_picker)
+        self.color_picker_btn.setMaximumWidth(100)
+        color_layout.addWidget(self.color_picker_btn)
+
+        layout.addLayout(color_layout)
+
+        # brightness slider
+        bri_layout = QHBoxLayout()
+        bri_layout.addWidget(QLabel("Brightness:"))
+        self.brightness_slider = QSlider(Qt.Horizontal)
+        self.brightness_slider.setMinimum(0)
+        self.brightness_slider.setMaximum(100)
+        self.brightness_slider.setValue(70)
+        self.brightness_slider.setTickPosition(QSlider.TicksBelow)
+        self.brightness_slider.setTickInterval(10)
+        self.brightness_slider.valueChanged.connect(self.on_brightness_changed)
+        bri_layout.addWidget(self.brightness_slider)
+
+        self.brightness_label = QLabel("70%")
+        self.brightness_label.setMinimumWidth(40)
+        bri_layout.addWidget(self.brightness_label)
+
+        layout.addLayout(bri_layout)
+
+        # Command input
+        command_layout = QHBoxLayout()
+        command_layout.addWidget(QLabel("Command:"))
+        self.command_input = QLineEdit()
+        self.command_input.setPlaceholderText("Enter command or action...")
+        self.command_input.textChanged.connect(self.on_command_changed)
+        command_layout.addWidget(self.command_input)
+
         # Browse button for executables
         browse_btn = QPushButton("Browse...")
         browse_btn.clicked.connect(self.browse_for_executable)
         browse_btn.setMaximumWidth(80)
-        action_layout.addWidget(browse_btn)
-        
-        layout.addLayout(action_layout)
-        
-        # Action examples
+        command_layout.addWidget(browse_btn)
+
+        layout.addLayout(command_layout)
+
+        # Command examples
         examples = QLabel("Examples: notepad.exe, calc.exe, explorer.exe, cmd /c echo Hello")
         examples.setStyleSheet("color: gray; font-style: italic;")
         layout.addWidget(examples)
-        
+
         # Debug log
         self.log_text = QTextEdit()
         self.log_text.setMaximumHeight(100)
         self.log_text.setPlaceholderText("Debug log will appear here...")
         layout.addWidget(self.log_text)
-        
+
         self.selected_key_id = None
-        
+
         return group
     
     def update_profile_combo(self):
+        # Save current selection
+        current_index = self.profile_combo.currentIndex()
+
+        # Block signals to prevent triggering profile change
+        self.profile_combo.blockSignals(True)
+
+        # Update combo box items
         self.profile_combo.clear()
         for i, profile in enumerate(self.profiles):
             name = profile.get('name', f'Profile {i}')
             self.profile_combo.addItem(name)
+
+        # Restore selection if valid
+        if 0 <= current_index < len(self.profiles):
+            self.profile_combo.setCurrentIndex(current_index)
+
+        # Unblock signals
+        self.profile_combo.blockSignals(False)
     
     def load_current_profile(self):
         if self.current_profile_index < len(self.profiles):
             profile = self.profiles[self.current_profile_index]
-            self.key_actions = profile.get('actions', {})
-            
+            self.key_actions = profile.get('keys', {})
+
             # Convert string keys to int keys
             if isinstance(list(self.key_actions.keys())[0] if self.key_actions else None, str):
                 self.key_actions = {int(k): v for k, v in self.key_actions.items()}
-            
+
             # Update profile name input
             profile_name = profile.get('name', f'Profile {self.current_profile_index}')
             self.profile_name_input.setText(profile_name)
-            
+
             # Update profile combo
             self.profile_combo.setCurrentIndex(self.current_profile_index)
+
+            # Update all button labels and colors
+            for key_id, btn in self.key_buttons.items():
+                key_data = self.key_actions.get(key_id, {})
+                btn.set_label(key_data.get('label', ''))
+                btn.set_color(key_data.get('color', ''))
     
     def on_profile_changed(self, index):
         self.current_profile_index = index
@@ -253,35 +397,165 @@ class BLEDeckGUI(QMainWindow):
         self.selected_key_id = key_id
         key_name = self.key_id_to_char(key_id)
         self.selected_key_label.setText(f"Selected Key: {key_name} (ID: {key_id})")
-        
-        # Load existing action for this key
-        action = self.key_actions.get(key_id, "")
-        self.action_input.setText(action)
-    
-    def on_action_changed(self, text):
+
+        # Load existing data for this key
+        key_data = self.key_actions.get(key_id, {})
+        self.label_input.setText(key_data.get('label', ''))
+        self.color_input.setText(key_data.get('color', ''))
+        self.command_input.setText(key_data.get('command', ''))
+
+        # Update brightness slider
+        color_str = key_data.get('color', '')
+        if color_str:
+            try:
+                parts = color_str.split(',')
+                if len(parts) == 4:
+                    brightness = int(parts[3])
+                    self.brightness_slider.blockSignals(True)
+                    self.brightness_slider.setValue(brightness)
+                    self.brightness_label.setText(f"{brightness}%")
+                    self.brightness_slider.blockSignals(False)
+            except:
+                self.log(f"Color code: '{color_str}' is invalid")
+
+    def on_label_changed(self, text):
         if self.selected_key_id is not None:
-            if text.strip():
-                self.key_actions[self.selected_key_id] = text.strip()
-            elif self.selected_key_id in self.key_actions:
-                del self.key_actions[self.selected_key_id]
+            self.ensure_key_data_exists()
+            self.key_actions[self.selected_key_id]['label'] = text.strip()
+            # Update button label
+            self.key_buttons[self.selected_key_id].set_label(text.strip())
+
+    def on_color_changed(self, text):
+        if self.selected_key_id is not None:
+            self.ensure_key_data_exists()
+            self.key_actions[self.selected_key_id]['color'] = text.strip()
+            # Update button color
+            self.key_buttons[self.selected_key_id].set_color(text.strip())
+
+    def on_command_changed(self, text):
+        if self.selected_key_id is not None:
+            self.ensure_key_data_exists()
+            self.key_actions[self.selected_key_id]['command'] = text.strip()
+
+    def ensure_key_data_exists(self):
+        """Ensure the selected key has a dictionary entry"""
+        if self.selected_key_id is not None:
+            if self.selected_key_id not in self.key_actions:
+                self.key_actions[self.selected_key_id] = {'label': '', 'color': '', 'command': ''}
+
+    def open_color_picker(self):
+        """Open color picker dialog"""
+        if self.selected_key_id is None:
+            QMessageBox.warning(self, "No Key Selected", "Please select a key first.")
+            return
+
+        # Get current color if exists
+        current_color = QColor(128, 128, 128)  # Default gray
+        color_str = self.color_input.text()
+        if color_str:
+            try:
+                parts = color_str.split(',')
+                if len(parts) >= 3:
+                    r, g, b = map(int, parts[:3])
+                    current_color = QColor(r, g, b)
+            except:
+                self.log(f"Color code: '{color_str}' is invalid")
+
+        # Open color dialog
+        color = QColorDialog.getColor(current_color, self, "Select Key Color")
+
+        if color.isValid():
+            # Get RGB values
+            r, g, b = color.red(), color.green(), color.blue()
+            # Get current brightness or default to 70
+            brightness = self.brightness_slider.value()
+
+            # Update color input
+            color_string = f"{r},{g},{b},{brightness}"
+            self.color_input.setText(color_string)
+
+    def on_brightness_changed(self, value):
+        """Handle brightness slider change"""
+        self.brightness_label.setText(f"{value}%")
+
+        if self.selected_key_id is not None:
+            # Update the color string with new brightness
+            color_str = self.color_input.text()
+            if color_str:
+                try:
+                    parts = color_str.split(',')
+                    if len(parts) >= 3:
+                        r, g, b = parts[:3]
+                        new_color_str = f"{r},{g},{b},{value}"
+                        self.color_input.blockSignals(True)
+                        self.color_input.setText(new_color_str)
+                        self.color_input.blockSignals(False)
+                        # Manually trigger color change
+                        self.on_color_changed(new_color_str)
+                except:
+                    self.log(f"Color code: {color_str}' is invalid")
     
+    def create_new_profile(self):
+        """Create a new empty profile"""
+        # Create a new profile with a default name
+        profile_count = len(self.profiles) + 1
+        new_profile = {
+            "name": f"New Profile {profile_count}",
+            "keys": {}
+        }
+
+        # Add to profiles list
+        self.profiles.append(new_profile)
+
+        # Switch to the new profile
+        self.current_profile_index = len(self.profiles) - 1
+        self.key_actions = {}
+
+        # Update UI
+        self.update_profile_combo()
+        self.profile_combo.setCurrentIndex(self.current_profile_index)
+        self.profile_name_input.setText(new_profile['name'])
+
+        # Clear all button labels and colors
+        for btn in self.key_buttons.values():
+            btn.set_label('')
+            btn.set_color('')
+
+        # Clear the action panel
+        if hasattr(self, 'label_input'):
+            self.label_input.clear()
+        if hasattr(self, 'color_input'):
+            self.color_input.clear()
+        if hasattr(self, 'command_input'):
+            self.command_input.clear()
+
+        self.log(f"Created new profile: {new_profile['name']}")
+        self.log(f"Remember to save it before closing or switching profile")
+
     def save_current_profile(self):
         if self.current_profile_index < len(self.profiles):
             profile = self.profiles[self.current_profile_index]
         else:
             profile = {}
             self.profiles.append(profile)
-        
+
         old_name = profile.get('name', f'Profile {self.current_profile_index}')
         new_name = self.profile_name_input.text() or f'Profile {self.current_profile_index}'
-        
+
         profile['name'] = new_name
-        profile['actions'] = self.key_actions.copy()
-        
+        # Convert int keys to string keys for JSON serialization, filtering out empty keys
+        filtered_keys = {}
+        for k, v in self.key_actions.items():
+            # Only save if at least command is not empty
+            if v.get('command', '').strip():
+                filtered_keys[str(k)] = v
+
+        profile['keys'] = filtered_keys
+
         save_profiles(self.profiles)
         self.update_profile_combo()
         self.log("Profile saved successfully")
-        
+
         # If profile name changed and we're connected, sync with device
         if self.is_connected and old_name != new_name:
             self.log(f"📁 Profile name changed: '{old_name}' → '{new_name}'")
@@ -343,17 +617,17 @@ class BLEDeckGUI(QMainWindow):
     def browse_for_executable(self):
         file_dialog = QFileDialog()
         file_path, _ = file_dialog.getOpenFileName(
-            self, 
-            "Select Executable", 
-            "", 
+            self,
+            "Select Executable",
+            "",
             "Executable Files (*.exe);;Batch Files (*.bat);;All Files (*.*)"
         )
-        
+
         if file_path:
             # Use quotes if path contains spaces
             if ' ' in file_path:
                 file_path = f'"{file_path}"'
-            self.action_input.setText(file_path)
+            self.command_input.setText(file_path)
     
     def toggle_connection(self):
         if self.is_connected:
@@ -435,9 +709,7 @@ class BLEDeckGUI(QMainWindow):
             await self.send_profile_change()
             
             # Start timers
-            self.ping_timer.start(30000)  # Ping every 30 seconds (less aggressive)
-            # Disabled connection health check to prevent false disconnects
-            # self.connection_check_timer.start(5000)
+            self.ping_timer.start(30000)  # Ping every 30 seconds
             
             self.log(f"✅ Connected to {target.address}")
             
@@ -540,11 +812,6 @@ class BLEDeckGUI(QMainWindow):
         if not self.is_connected:
             asyncio.create_task(self.connect())
     
-    def check_connection_health(self):
-        # Disabled connection health monitoring to prevent false disconnects
-        # Only disconnect on actual send/receive failures
-        pass
-    
     async def handle_notification(self, sender, data):
         try:
             msg = data.decode("utf-8").strip()
@@ -620,27 +887,76 @@ class BLEDeckGUI(QMainWindow):
         if profile_index is None or profile_index >= len(self.profiles):
             self.log(f"⚠️ Invalid profile index: {profile_index}")
             return
-            
+
         profile = self.profiles[profile_index]
-        profile_actions = profile.get('actions', {})
-        
+        profile_keys = profile.get('keys', {})
+
         # Convert string keys to int if needed
-        if isinstance(list(profile_actions.keys())[0] if profile_actions else None, str):
-            profile_actions = {int(k): v for k, v in profile_actions.items()}
-        
-        action = profile_actions.get(key_id)
+        if isinstance(list(profile_keys.keys())[0] if profile_keys else None, str):
+            profile_keys = {int(k): v for k, v in profile_keys.items()}
+
+        key_data = profile_keys.get(key_id)
         profile_name = profile.get('name', f'Profile {profile_index}')
-        
-        if action:
+
+        if key_data:
             try:
-                import subprocess
-                # Execute the command
-                subprocess.Popen(action, shell=True)
-                self.log(f"⚡ Executed from '{profile_name}': {action}")
+                # Extract command from the key data
+                command = key_data.get('command', '')
+
+                if command:
+                    import subprocess
+                    # Execute the command with error capture
+                    # Use CREATE_NO_WINDOW flag on Windows to prevent console windows
+                    startupinfo = None
+                    if sys.platform == 'win32':
+                        startupinfo = subprocess.STARTUPINFO()
+                        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+                    process = subprocess.Popen(
+                        command,
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        startupinfo=startupinfo,
+                        text=True
+                    )
+
+                    self.log(f"⚡ Executed from '{profile_name}': {command}")
+
+                    # Check for errors in a background task
+                    asyncio.create_task(self._check_command_errors(process, command, profile_name))
+                else:
+                    self.log(f"⚠️ No command defined for key {key_id} in profile '{profile_name}'")
             except Exception as e:
                 self.log(f"❌ Action failed from '{profile_name}': {str(e)}")
         else:
             self.log(f"⚠️ No action defined for key {key_id} in profile '{profile_name}'")
+
+    async def _check_command_errors(self, process, command, profile_name):
+        """Check if a command produced errors"""
+        try:
+            # Wait for the process to complete (with timeout)
+            stdout, stderr = await asyncio.wait_for(
+                asyncio.to_thread(process.communicate),
+                timeout=5.0
+            )
+
+            # Check return code and stderr
+            if process.returncode != 0 and stderr:
+                # Extract meaningful error message
+                error_lines = stderr.strip().split('\n')
+                # Get the most relevant error line (usually the last non-empty one)
+                error_msg = next((line for line in reversed(error_lines) if line.strip()), stderr.strip())
+                self.log(f"❌ Command error from '{profile_name}': {error_msg}")
+                self.log(f"   Command: {command}")
+            elif process.returncode != 0:
+                self.log(f"⚠️ Command exited with code {process.returncode} from '{profile_name}'")
+
+        except asyncio.TimeoutError:
+            # Command is still running after timeout - this is fine, it's probably a long-running process
+            pass
+        except Exception as e:
+            self.log(f"⚠️ Error checking command status: {str(e)}")
     
     def char_to_key_id(self, key_char):
         """Convert key character to key ID (0-15)"""
@@ -668,7 +984,7 @@ class BLEDeckGUI(QMainWindow):
     def closeEvent(self, event):
         """Handle window close event"""
         print("Application closing...")
-        
+
         # Stop timers first
         if hasattr(self, 'ping_timer'):
             self.ping_timer.stop()
@@ -676,7 +992,7 @@ class BLEDeckGUI(QMainWindow):
             self.connect_timer.stop()
         if hasattr(self, 'connection_check_timer'):
             self.connection_check_timer.stop()
-        
+
         # Properly disconnect from device if connected
         if self.is_connected and self.ble_client:
             try:
@@ -687,18 +1003,21 @@ class BLEDeckGUI(QMainWindow):
                     disconnect_task = loop.create_task(self.disconnect())
                     # Use QTimer to wait for disconnect to complete before closing
                     self._disconnect_task = disconnect_task
-                    
+
                     def check_disconnect():
                         if disconnect_task.done():
                             print("BLE disconnect completed")
+                            print("Application closed gracefully")
+                            # Signal the quit event to terminate the event loop
+                            self.quit_event.set()
                             QApplication.quit()
                         else:
                             QTimer.singleShot(100, check_disconnect)
-                    
+
                     QTimer.singleShot(100, check_disconnect)
                     event.ignore()  # Don't close yet, wait for disconnect
                     return
-                    
+
                 except RuntimeError:
                     # No event loop running, force cleanup
                     print("No event loop - forcing cleanup")
@@ -708,22 +1027,23 @@ class BLEDeckGUI(QMainWindow):
                 print(f"Error during disconnect: {e}")
                 self.is_connected = False
                 self.ble_client = None
-        
+
         print("Application closed gracefully")
+        # Signal the quit event to terminate the event loop
+        self.quit_event.set()
+        QApplication.quit()
         event.accept()
 
-
 async def main():
-    # Create application
-    app = QApplication(sys.argv)
-    
-    # Create and show GUI
-    window = BLEDeckGUI()
-    window.show()
-    
-    # This will run until the application exits
-    await asyncio.Event().wait()
+    # Create event for proper shutdown
+    quit_event = asyncio.Event()
 
+    # Create and show GUI
+    window = BLEDeckGUI(quit_event)
+    window.show()
+
+    # Wait for the quit event to be set (when window closes)
+    await quit_event.wait()
 
 if __name__ == "__main__":
     try:
