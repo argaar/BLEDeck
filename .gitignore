@@ -8,5 +8,8 @@ firmware/.vscode
 firmware/env
 firmware/.gitignore
 
+pcb/bledeck/bledeck-backups
+
 assets
 docs
+.vscode

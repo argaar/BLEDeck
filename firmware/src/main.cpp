@@ -11,6 +11,7 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <images.h>
+#include <NeoPixelBus.h>
 
 // Prefs
 Preferences prefs;
@@ -32,6 +33,9 @@ void updateOLED(int profile) {
   display->display();
   Serial.println(profile_string);
 }
+
+// RGB
+NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> rgb_keys(RGB_NUM, RGB_PIN);
 
 // BLE Connection Management
 BLEServer* pServer;
@@ -244,6 +248,10 @@ void setup() {
   display->drawXbm((display->getWidth()-LOGO_IMAGE_WIDTH)/2, (display->getHeight()-LOGO_IMAGE_HEIGHT)/2, LOGO_IMAGE_WIDTH, LOGO_IMAGE_HEIGHT, LOGO_IMAGE);
   display->display();
 
+  // RGB
+  rgb_keys.Begin();
+  rgb_keys.Show();
+
   // Keys
   keypad = new Keypad(makeKeymap(hexaKeys), rowPins, colPins, 4, 4);
 
@@ -307,6 +315,16 @@ void setup() {
 void loop() {
   btn_encoder_con.update();
   btn_encoder_back.update();
+
+  for(int i=0; i<5; i++) {
+    int mR = random(0, 250);
+    int mG = random(0, 250);
+    int mB = random(0, 250);
+    Serial.println("R:" + String(mR) + " G:" + String(mG) + " B:" + String(mB));
+    rgb_keys.SetPixelColor(0, RgbColor(mR, mG, mB));
+    rgb_keys.Show();   // Send the updated pixel colors to the hardware.
+    delay(500); // Pause before next pass through loop
+  }
 
   // Handle connection state changes
   if (!deviceConnected && oldDeviceConnected) {

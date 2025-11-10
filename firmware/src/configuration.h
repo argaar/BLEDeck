@@ -25,4 +25,8 @@
 #define COL_PIN_3               GPIO_NUM_18
 #define COL_PIN_4               GPIO_NUM_5
 
+// RGB
+#define RGB_PIN                 GPIO_NUM_27
+#define RGB_NUM                 1
+
 #endif // CONFIGURATION_H

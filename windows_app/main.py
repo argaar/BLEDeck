@@ -1,12 +1,14 @@
 import sys
 import asyncio
+import qasync
+import ctypes
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
                              QWidget, QLabel, QPushButton, QLineEdit, QComboBox,
                              QGridLayout, QGroupBox, QStatusBar, QTextEdit,
-                             QFileDialog, QMessageBox, QCheckBox, QColorDialog, QSlider)
-from PyQt5.QtCore import Qt, QTimer, pyqtSlot
+                             QFileDialog, QMessageBox, QCheckBox, QColorDialog,
+                             QSlider, QSystemTrayIcon, QMenu, QAction)
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QColor, QIcon
-import qasync
 
 from ble_client import BleakClient, DEVICE_NAME, CHAR_TX_UUID, CHAR_RX_UUID
 from profile_manager import load_profiles, save_profiles
@@ -54,7 +56,7 @@ class KeyButton(QPushButton):
                     self.key_color = (r, g, b, brightness)
                 else:
                     self.key_color = None
-            except:
+            except AttributeError:
                 self.key_color = None
         else:
             self.key_color = None
@@ -124,6 +126,30 @@ class BLEDeckGUI(QMainWindow):
         self.setWindowTitle("BLEDeck Control Panel")
         self.setGeometry(100, 100, 800, 600)
         self.setWindowIcon(QIcon("icon.ico"))
+        
+        # Create tray icon
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(QIcon("icon.ico"))  # put your own icon path here
+        self.tray_icon.setToolTip("BLEDeck Control Panel")
+
+        self.already_minimized = False
+
+        # Create context menu for tray
+        tray_menu = QMenu()
+
+        restore_action = QAction("Open", self)
+        restore_action.triggered.connect(self.showNormal)
+        tray_menu.addAction(restore_action)
+
+        quit_action = QAction("Quit", self)
+        quit_action.triggered.connect(QApplication.quit)
+        tray_menu.addAction(quit_action)
+
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.show()
+
+        # Connect double-click on tray icon to restore
+        self.tray_icon.activated.connect(self.on_tray_icon_activated)
 
         # Store quit event for proper shutdown
         self.quit_event = quit_event
@@ -146,6 +172,11 @@ class BLEDeckGUI(QMainWindow):
         self.ping_timer = QTimer()
         self.ping_timer.timeout.connect(self.send_ping)
 
+        # Setup timer to detect locked workstation
+        self.device_lock_timer = QTimer()
+        self.device_lock_timer.timeout.connect(self.screen_locked)
+        #self.device_lock_timer.start(5000)
+
         # Auto-connect timer - start disabled, can be enabled via UI
         self.connect_timer = QTimer()
         self.connect_timer.timeout.connect(self.auto_connect)
@@ -161,7 +192,7 @@ class BLEDeckGUI(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
-        
+
         # Top panel - Connection and Profile
         top_panel = self.create_top_panel()
         layout.addWidget(top_panel)
@@ -282,7 +313,7 @@ class BLEDeckGUI(QMainWindow):
         # brightness slider
         bri_layout = QHBoxLayout()
         bri_layout.addWidget(QLabel("Brightness:"))
-        self.brightness_slider = QSlider(Qt.Horizontal)
+        self.brightness_slider = QSlider(Qt.Horizontal) # pyright: ignore[reportAttributeAccessIssue]
         self.brightness_slider.setMinimum(0)
         self.brightness_slider.setMaximum(100)
         self.brightness_slider.setValue(70)
@@ -328,6 +359,33 @@ class BLEDeckGUI(QMainWindow):
 
         return group
     
+    def restore_from_tray(self):
+        self.showNormal()
+        self.activateWindow()
+
+    def on_tray_icon_activated(self, reason):
+        """
+        reason is an enum value. Different PyQt versions expose enums differently;
+        check for DoubleClick first, otherwise fall back to Trigger (single click).
+        """
+        # Try to get enum attributes safely
+        dd = getattr(QSystemTrayIcon, "DoubleClick", None)
+        trig = getattr(QSystemTrayIcon, "Trigger", None)
+
+        # If DoubleClick available, use it. Otherwise use Trigger as a reliable fallback.
+        if dd is not None and reason == dd:
+            self.restore_from_tray()
+        elif trig is not None and reason == trig:
+            # Many Windows setups send Trigger (single click) rather than DoubleClick
+            self.restore_from_tray()
+        else:
+            # As a final fallback compare numeric value for DoubleClick (often 3)
+            try:
+                if int(reason) == 3:  
+                    self.restore_from_tray()
+            except Exception:
+                pass
+
     def update_profile_combo(self):
         # Save current selection
         current_index = self.profile_combo.currentIndex()
@@ -399,7 +457,7 @@ class BLEDeckGUI(QMainWindow):
                     self.brightness_slider.setValue(brightness)
                     self.brightness_label.setText(f"{brightness}%")
                     self.brightness_slider.blockSignals(False)
-            except:
+            except AttributeError:
                 self.log(f"Color code: '{color_str}' is invalid")
 
     def on_label_changed(self, text):
@@ -442,7 +500,7 @@ class BLEDeckGUI(QMainWindow):
                 if len(parts) >= 3:
                     r, g, b = map(int, parts[:3])
                     current_color = QColor(r, g, b)
-            except:
+            except AttributeError:
                 self.log(f"Color code: '{color_str}' is invalid")
 
         # Open color dialog
@@ -476,7 +534,7 @@ class BLEDeckGUI(QMainWindow):
                         self.color_input.blockSignals(False)
                         # Manually trigger color change
                         self.on_color_changed(new_color_str)
-                except:
+                except AttributeError:
                     self.log(f"Color code: {color_str}' is invalid")
     
     def create_new_profile(self):
@@ -514,7 +572,7 @@ class BLEDeckGUI(QMainWindow):
             self.command_input.clear()
 
         self.log(f"Created new profile: {new_profile['name']}")
-        self.log(f"Remember to save it before closing or switching profile")
+        self.log("Remember to save it before closing or switching profile")
 
     def save_current_profile(self):
         if self.current_profile_index < len(self.profiles):
@@ -566,6 +624,13 @@ class BLEDeckGUI(QMainWindow):
         
         profile_name = self.profiles[device_profile_index].get('name', f'Profile {device_profile_index}')
         self.log(f"✅ App profile synced to: '{profile_name}'")
+        if self.isMinimized():
+            self.tray_icon.showMessage(
+                "Profile Changed",
+                f"'{profile_name}' is the profile now in use.",
+                QIcon("icon.ico"),
+                500
+            )
     
     def delete_current_profile(self):
         if len(self.profiles) <= 1:
@@ -707,13 +772,10 @@ class BLEDeckGUI(QMainWindow):
     async def cleanup_failed_connection(self):
         self.is_connected = False
         if self.ble_client:
-            try:
-                await self.ble_client.disconnect()
-            except:
-                pass
+            await self.ble_client.disconnect()
         self.ble_client = None
     
-    async def disconnect(self):
+    async def disconnect(self): # pyright: ignore[reportIncompatibleMethodOverride]
         self.log("🔌 Starting disconnect process...")
         
         # Stop timers first
@@ -962,9 +1024,35 @@ class BLEDeckGUI(QMainWindow):
         self.log_text.append(message)
         # Auto-scroll to bottom
         scrollbar = self.log_text.verticalScrollBar()
-        scrollbar.setValue(scrollbar.maximum())
+        scrollbar.setValue(scrollbar.maximum()) # pyright: ignore[reportOptionalMemberAccess]
     
-    def closeEvent(self, event):
+    def screen_locked(self):
+        """
+        Find if the user has locked their screen.
+        """
+        if self.is_connected:
+            user32 = ctypes.windll.User32
+            if (user32.GetForegroundWindow() % 10 == 0):
+                asyncio.create_task(self.send_ble("LOCKED:1"))
+            else:
+                asyncio.create_task(self.send_ble("LOCKED:0"))
+
+    def changeEvent(self, event): # pyright: ignore[reportIncompatibleMethodOverride]
+        """Intercept minimize event and hide window instead."""
+        if event.type() == event.WindowStateChange:
+            if self.isMinimized():
+                QTimer.singleShot(0, self.hide)
+                if not self.already_minimized:
+                    self.tray_icon.showMessage(
+                        "Minimized to tray",
+                        "Your app is still running here.",
+                        QIcon("icon.ico"),
+                        1000
+                    )
+                    self.already_minimized = True
+        super().changeEvent(event)
+
+    def closeEvent(self, event): # pyright: ignore[reportIncompatibleMethodOverride]
         """Handle window close event"""
         print("Application closing...")
 
@@ -972,6 +1060,8 @@ class BLEDeckGUI(QMainWindow):
         if hasattr(self, 'ping_timer'):
             self.ping_timer.stop()
         if hasattr(self, 'connect_timer'):
+            self.connect_timer.stop()
+        if hasattr(self, 'device_lock_timer'):
             self.connect_timer.stop()
 
         # Properly disconnect from device if connected
@@ -1016,6 +1106,11 @@ class BLEDeckGUI(QMainWindow):
         event.accept()
 
 async def main():
+    app = QApplication(sys.argv)
+    app.setApplicationName("BLEDeck")
+    app.setApplicationDisplayName("BLEDeck")
+    app.setWindowIcon(QIcon("icon.ico"))
+
     # Create event for proper shutdown
     quit_event = asyncio.Event()
 

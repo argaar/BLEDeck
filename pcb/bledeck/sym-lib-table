@@ -1,0 +1,7 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "Esp32")(type "KiCad")(uri "${KIPRJMOD}/../libs/symbols/ESP32-DEVKIT-V1.kicad_sym")(options "")(descr ""))
+  (lib (name "Led 1204")(type "KiCad")(uri "${KIPRJMOD}/../libs/symbols/WS2812B-1204.kicad_sym")(options "")(descr ""))
+  (lib (name "Led 4020")(type "KiCad")(uri "${KIPRJMOD}/../libs/symbols/WS2812B-4020.kicad_sym")(options "")(descr ""))
+  (lib (name "Kailh HS")(type "KiCad")(uri "${KIPRJMOD}/../libs/symbols/PG151101S11.kicad_sym")(options "")(descr ""))
+)
