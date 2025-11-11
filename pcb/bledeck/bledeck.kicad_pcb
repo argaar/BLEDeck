@@ -132,7 +132,7 @@
 	(net 46 "unconnected-(U1-EN-Pad16)")
 	(net 47 "unconnected-(U1-RX0-Pad12)")
 	(net 48 "unconnected-(U1-D13-Pad28)")
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "0027a9e1-cb68-4a46-b9af-6988a0a080b2")
 		(at 150.535 157.11)
@@ -842,7 +842,7 @@
 			)
 		)
 	)
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "0e02f3dc-5c87-4766-8b56-1515e1bdf108")
 		(at 112.535 157.11)
@@ -1552,7 +1552,7 @@
 			)
 		)
 	)
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "0ffe46d1-298e-49d8-bba8-5b0d4f39af87")
 		(at 112.535 137.61)
@@ -2262,7 +2262,7 @@
 			)
 		)
 	)
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "137deece-74c3-4db8-a47c-2fc7c86c54d4")
 		(at 149.415 101.19)
@@ -2989,7 +2989,7 @@
 				)
 			)
 		)
-		(property "Value" "Conn_01x09_Socket"
+		(property "Value" "oled"
 			(at 0 8.5 0)
 			(layer "F.Fab")
 			(uuid "1c9476f7-9e6f-4b88-8f69-07dbd08e4000")
@@ -3012,7 +3012,7 @@
 				)
 			)
 		)
-		(property "Description" "Generic connector, single row, 01x09, script generated"
+		(property "Description" ""
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -3679,7 +3679,7 @@
 			)
 		)
 	)
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "3457b37a-e8b5-4959-af8d-480e2cbe8b38")
 		(at 132.035 157.11)
@@ -4389,7 +4389,7 @@
 			)
 		)
 	)
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "55596a15-e4ce-48fd-aa06-090adc07f7d4")
 		(at 150.415 137.69)
@@ -5528,7 +5528,7 @@
 			)
 		)
 	)
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "594744d4-83b3-47d0-9147-0827d7ea6a7d")
 		(at 131.165 119.69)
@@ -6667,7 +6667,7 @@
 			)
 		)
 	)
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "655112dd-8634-4036-8d11-3cb4afb201d5")
 		(at 131.915 137.69)
@@ -7806,7 +7806,7 @@
 			)
 		)
 	)
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "872ac988-3048-4d44-9b38-e5a791edbb06")
 		(at 149.955 119.61)
@@ -8516,7 +8516,7 @@
 			)
 		)
 	)
-	(footprint "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical"
+	(footprint "BLEDeck:PinHeader_1x02_P2.54mm_Vertical"
 		(layer "F.Cu")
 		(uuid "8bc1e581-5dd2-4a8c-8372-ebb8776b1343")
 		(at 101.46 57.5 90)
@@ -8759,7 +8759,7 @@
 		)
 		(embedded_fonts no)
 	)
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "90389418-8b8f-49ce-bc1b-86afdd7d04ae")
 		(at 111.765 119.65)
@@ -9469,7 +9469,7 @@
 			)
 		)
 	)
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "94f33e7a-e5f2-4b47-95a6-3e4b066ccce2")
 		(at 92.375 137.61)
@@ -11037,7 +11037,7 @@
 			)
 		)
 	)
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "aa0f483c-1889-4dbc-b7cb-d24adeb43812")
 		(at 111.455 101.11)
@@ -13664,7 +13664,7 @@
 			)
 		)
 	)
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "bd8d1eeb-f87e-4c19-a881-b40a8f502101")
 		(at 92.455 157.11)
@@ -14374,7 +14374,7 @@
 			)
 		)
 	)
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "beb50487-0255-4859-b8fe-f11a5276eb6d")
 		(at 92.415 119.69)
@@ -15942,7 +15942,7 @@
 			)
 		)
 	)
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "d27deb51-1220-4d94-b507-bf1e3d55602b")
 		(at 92.375 101.11)
@@ -18797,7 +18797,7 @@
 			)
 		)
 	)
-	(footprint "Connector:Kailh_socket_MX"
+	(footprint "BLEDeck:Kailh_socket_MX"
 		(layer "F.Cu")
 		(uuid "fc872ceb-f77b-4598-aac6-3cbe0ac70675")
 		(at 130.875 101.11)

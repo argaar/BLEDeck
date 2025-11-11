@@ -11,901 +11,7 @@
 		(company "Davide \"Argaar\" Foschi")
 	)
 	(lib_symbols
-		(symbol "Connector:Conn_01x02_Socket"
-			(pin_names
-				(offset 1.016)
-				(hide yes)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "J"
-				(at 0 2.54 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Value" "Conn_01x02_Socket"
-				(at 0 -5.08 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Footprint" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" "~"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" "Generic connector, single row, 01x02, script generated"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_locked" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "ki_keywords" "connector"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_fp_filters" "Connector*:*_1x??_*"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "Conn_01x02_Socket_1_1"
-				(polyline
-					(pts
-						(xy -1.27 0) (xy -0.508 0)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 -2.54) (xy -0.508 -2.54)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 -0.508)
-					(mid -0.5058 0)
-					(end 0 0.508)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 -3.048)
-					(mid -0.5058 -2.54)
-					(end 0 -2.032)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(pin passive line
-					(at -5.08 0 0)
-					(length 3.81)
-					(name "Pin_1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at -5.08 -2.54 0)
-					(length 3.81)
-					(name "Pin_2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
-		(symbol "Connector:Conn_01x09_Socket"
-			(pin_names
-				(offset 1.016)
-				(hide yes)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "J"
-				(at 0 12.7 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Value" "Conn_01x09_Socket"
-				(at 0 -12.7 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Footprint" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" "~"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" "Generic connector, single row, 01x09, script generated"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_locked" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "ki_keywords" "connector"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_fp_filters" "Connector*:*_1x??_*"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "Conn_01x09_Socket_1_1"
-				(polyline
-					(pts
-						(xy -1.27 10.16) (xy -0.508 10.16)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 7.62) (xy -0.508 7.62)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 5.08) (xy -0.508 5.08)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 2.54) (xy -0.508 2.54)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 0) (xy -0.508 0)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 -2.54) (xy -0.508 -2.54)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 -5.08) (xy -0.508 -5.08)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 -7.62) (xy -0.508 -7.62)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 -10.16) (xy -0.508 -10.16)
-					)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 9.652)
-					(mid -0.5058 10.16)
-					(end 0 10.668)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 7.112)
-					(mid -0.5058 7.62)
-					(end 0 8.128)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 4.572)
-					(mid -0.5058 5.08)
-					(end 0 5.588)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 2.032)
-					(mid -0.5058 2.54)
-					(end 0 3.048)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 -0.508)
-					(mid -0.5058 0)
-					(end 0 0.508)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 -3.048)
-					(mid -0.5058 -2.54)
-					(end 0 -2.032)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 -5.588)
-					(mid -0.5058 -5.08)
-					(end 0 -4.572)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 -8.128)
-					(mid -0.5058 -7.62)
-					(end 0 -7.112)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 -10.668)
-					(mid -0.5058 -10.16)
-					(end 0 -9.652)
-					(stroke
-						(width 0.1524)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(pin passive line
-					(at -5.08 10.16 0)
-					(length 3.81)
-					(name "Pin_1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at -5.08 7.62 0)
-					(length 3.81)
-					(name "Pin_2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at -5.08 5.08 0)
-					(length 3.81)
-					(name "Pin_3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at -5.08 2.54 0)
-					(length 3.81)
-					(name "Pin_4"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "4"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at -5.08 0 0)
-					(length 3.81)
-					(name "Pin_5"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "5"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at -5.08 -2.54 0)
-					(length 3.81)
-					(name "Pin_6"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "6"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at -5.08 -5.08 0)
-					(length 3.81)
-					(name "Pin_7"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "7"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at -5.08 -7.62 0)
-					(length 3.81)
-					(name "Pin_8"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "8"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at -5.08 -10.16 0)
-					(length 3.81)
-					(name "Pin_9"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "9"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
-		(symbol "Device:WS2812B-4020"
-			(pin_names
-				(offset 1.016)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "D"
-				(at -7.62 8.128 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left bottom)
-				)
-			)
-			(property "Value" "WS2812B-4020"
-				(at -7.62 -10.16 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left bottom)
-				)
-			)
-			(property "Footprint" "WS2812B-4020:LED_WS2812B-4020"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "MF" "Worldsemi"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-					(hide yes)
-				)
-			)
-			(property "MAXIMUM_PACKAGE_HEIGHT" "2.05 mm"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-					(hide yes)
-				)
-			)
-			(property "Package" "Package"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-					(hide yes)
-				)
-			)
-			(property "Price" "None"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-					(hide yes)
-				)
-			)
-			(property "Check_prices" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=eda"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-					(hide yes)
-				)
-			)
-			(property "STANDARD" "Manufacturer Recommendations"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-					(hide yes)
-				)
-			)
-			(property "PARTREV" "V1.2"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-					(hide yes)
-				)
-			)
-			(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-					(hide yes)
-				)
-			)
-			(property "MP" "WS2812B-4020"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-					(hide yes)
-				)
-			)
-			(property "Description_1" "12mA RGB SMD,2x4mm Light Emitting Diodes"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-					(hide yes)
-				)
-			)
-			(property "MANUFACTURER" "Worldsemi"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-					(hide yes)
-				)
-			)
-			(property "Availability" "Not in stock"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-					(hide yes)
-				)
-			)
-			(property "SNAPEDA_PN" "WS2812B-4020"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-					(hide yes)
-				)
-			)
-			(symbol "WS2812B-4020_0_0"
-				(rectangle
-					(start -7.62 -7.62)
-					(end 7.62 7.62)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type background)
-					)
-				)
-				(pin input line
-					(at -12.7 0 0)
-					(length 5.08)
-					(name "DIN"
-						(effects
-							(font
-								(size 1.016 1.016)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.016 1.016)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at 12.7 5.08 180)
-					(length 5.08)
-					(name "VDD"
-						(effects
-							(font
-								(size 1.016 1.016)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.016 1.016)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 12.7 0 180)
-					(length 5.08)
-					(name "DOUT"
-						(effects
-							(font
-								(size 1.016 1.016)
-							)
-						)
-					)
-					(number "3"
-						(effects
-							(font
-								(size 1.016 1.016)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at 12.7 -5.08 180)
-					(length 5.08)
-					(name "VSS"
-						(effects
-							(font
-								(size 1.016 1.016)
-							)
-						)
-					)
-					(number "4"
-						(effects
-							(font
-								(size 1.016 1.016)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
-		(symbol "Esp32:ESP32-DEVKIT-V1"
+		(symbol "BLEDeck:ESP32-DEVKIT-V1"
 			(pin_names
 				(offset 1.016)
 			)
@@ -1633,7 +739,7 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "PG151101S11:PG151101S11"
+		(symbol "BLEDeck:PG151101S11"
 			(pin_names
 				(offset 1.016)
 			)
@@ -1850,6 +956,900 @@
 						(effects
 							(font
 								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "BLEDeck:WS2812B-4020"
+			(pin_names
+				(offset 1.016)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "D"
+				(at -7.62 8.128 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left bottom)
+				)
+			)
+			(property "Value" "WS2812B-4020"
+				(at -7.62 -10.16 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left bottom)
+				)
+			)
+			(property "Footprint" "BLEDeck:WS2812B-4020"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "MF" "Worldsemi"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "MAXIMUM_PACKAGE_HEIGHT" "2.05 mm"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "Package" "Package"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "Price" "None"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "Check_prices" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=eda"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "STANDARD" "Manufacturer Recommendations"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "PARTREV" "V1.2"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
+				(at 2.286 10.922 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "MP" "WS2812B-4020"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "Description_1" "12mA RGB SMD,2x4mm Light Emitting Diodes"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "MANUFACTURER" "Worldsemi"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "Availability" "Not in stock"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(property "SNAPEDA_PN" "WS2812B-4020"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+					(hide yes)
+				)
+			)
+			(symbol "WS2812B-4020_0_0"
+				(rectangle
+					(start -7.62 7.62)
+					(end 7.62 -7.62)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+				(pin input line
+					(at -12.7 0 0)
+					(length 5.08)
+					(name "DIN"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 12.7 5.08 180)
+					(length 5.08)
+					(name "VDD"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin output line
+					(at 12.7 0 180)
+					(length 5.08)
+					(name "DOUT"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 12.7 -5.08 180)
+					(length 5.08)
+					(name "VSS"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "Connector:Conn_01x02_Socket"
+			(pin_names
+				(offset 1.016)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "J"
+				(at 0 2.54 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "Conn_01x02_Socket"
+				(at 0 -5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "BLEDeck:PinHeader_1x02_P2.54mm_Vertical"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Generic connector, single row, 01x02, script generated"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_locked" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "connector"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "Connector*:*_1x??_*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "Conn_01x02_Socket_1_1"
+				(polyline
+					(pts
+						(xy -1.27 0) (xy -0.508 0)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 -2.54) (xy -0.508 -2.54)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -0.508)
+					(mid -0.5058 0)
+					(end 0 0.508)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -3.048)
+					(mid -0.5058 -2.54)
+					(end 0 -2.032)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(pin passive line
+					(at -5.08 0 0)
+					(length 3.81)
+					(name "Pin_1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -2.54 0)
+					(length 3.81)
+					(name "Pin_2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "Connector:Conn_01x09_Socket"
+			(pin_names
+				(offset 1.016)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "J"
+				(at 0 12.7 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "Conn_01x09_Socket"
+				(at 0 -12.7 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "BLEDeck:oled_rotary"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Generic connector, single row, 01x09, script generated"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_locked" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "connector"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "Connector*:*_1x??_*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "Conn_01x09_Socket_1_1"
+				(polyline
+					(pts
+						(xy -1.27 10.16) (xy -0.508 10.16)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 7.62) (xy -0.508 7.62)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 5.08) (xy -0.508 5.08)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 2.54) (xy -0.508 2.54)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 0) (xy -0.508 0)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 -2.54) (xy -0.508 -2.54)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 -5.08) (xy -0.508 -5.08)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 -7.62) (xy -0.508 -7.62)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 -10.16) (xy -0.508 -10.16)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 9.652)
+					(mid -0.5058 10.16)
+					(end 0 10.668)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 7.112)
+					(mid -0.5058 7.62)
+					(end 0 8.128)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 4.572)
+					(mid -0.5058 5.08)
+					(end 0 5.588)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 2.032)
+					(mid -0.5058 2.54)
+					(end 0 3.048)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -0.508)
+					(mid -0.5058 0)
+					(end 0 0.508)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -3.048)
+					(mid -0.5058 -2.54)
+					(end 0 -2.032)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -5.588)
+					(mid -0.5058 -5.08)
+					(end 0 -4.572)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -8.128)
+					(mid -0.5058 -7.62)
+					(end 0 -7.112)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -10.668)
+					(mid -0.5058 -10.16)
+					(end 0 -9.652)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(pin passive line
+					(at -5.08 10.16 0)
+					(length 3.81)
+					(name "Pin_1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 7.62 0)
+					(length 3.81)
+					(name "Pin_2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 5.08 0)
+					(length 3.81)
+					(name "Pin_3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 2.54 0)
+					(length 3.81)
+					(name "Pin_4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 0 0)
+					(length 3.81)
+					(name "Pin_5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -2.54 0)
+					(length 3.81)
+					(name "Pin_6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -5.08 0)
+					(length 3.81)
+					(name "Pin_7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -7.62 0)
+					(length 3.81)
+					(name "Pin_8"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "8"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -10.16 0)
+					(length 3.81)
+					(name "Pin_9"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "9"
+						(effects
+							(font
+								(size 1.27 1.27)
 							)
 						)
 					)
@@ -4285,7 +4285,7 @@
 		(uuid "fd338648-2a12-4d76-9520-4bc3e96f9353")
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 176.53 99.06 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -4409,7 +4409,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 176.53 99.06 0)
+			(at 178.816 88.138 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4490,7 +4490,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 227.33 48.26 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -4614,7 +4614,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 227.33 48.26 0)
+			(at 229.616 37.338 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4695,7 +4695,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 64.77 152.4 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -4705,7 +4705,7 @@
 		(fields_autoplaced yes)
 		(uuid "21153ebe-4a64-44ae-9710-6ce11dd6dd26")
 		(property "Reference" "S11"
-			(at 64.77 144.78 0)
+			(at 64.77 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4721,7 +4721,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 64.77 152.4 0)
 			(effects
 				(font
@@ -4885,7 +4885,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 227.33 124.46 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -5009,7 +5009,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 227.33 124.46 0)
+			(at 229.616 113.538 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5090,7 +5090,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 87.63 152.4 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -5100,7 +5100,7 @@
 		(fields_autoplaced yes)
 		(uuid "25eb8ee1-fb6a-40ae-aa6a-01397a6ae7c7")
 		(property "Reference" "S13"
-			(at 87.63 144.78 0)
+			(at 87.63 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5116,7 +5116,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 87.63 152.4 0)
 			(effects
 				(font
@@ -5280,7 +5280,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 252.73 73.66 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -5404,7 +5404,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 252.73 73.66 0)
+			(at 255.016 62.738 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5485,7 +5485,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 227.33 73.66 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -5609,7 +5609,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 227.33 73.66 0)
+			(at 229.616 62.738 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5690,7 +5690,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 110.49 124.46 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -5700,7 +5700,7 @@
 		(fields_autoplaced yes)
 		(uuid "39e66a34-22b4-40a2-af82-dcf040a705fb")
 		(property "Reference" "S4"
-			(at 110.49 116.84 0)
+			(at 110.49 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5716,7 +5716,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 110.49 124.46 0)
 			(effects
 				(font
@@ -5880,7 +5880,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 252.73 99.06 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -6004,7 +6004,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 252.73 99.06 0)
+			(at 255.016 88.138 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6085,7 +6085,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 176.53 124.46 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -6209,7 +6209,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 176.53 124.46 0)
+			(at 178.816 113.538 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6290,7 +6290,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 201.93 73.66 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -6414,7 +6414,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 201.93 73.66 0)
+			(at 204.216 62.738 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6495,7 +6495,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 201.93 99.06 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -6619,7 +6619,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 201.93 99.06 0)
+			(at 204.216 88.138 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6791,7 +6791,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 252.73 124.46 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -6915,7 +6915,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 252.73 124.46 0)
+			(at 255.016 113.538 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6996,7 +6996,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 176.53 48.26 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -7120,7 +7120,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 176.53 48.26 0)
+			(at 178.816 37.338 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7201,7 +7201,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 41.91 138.43 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -7211,7 +7211,7 @@
 		(fields_autoplaced yes)
 		(uuid "94d4b200-a20f-479d-9231-a34ff32fb93e")
 		(property "Reference" "S5"
-			(at 41.91 130.81 0)
+			(at 41.91 133.35 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7227,7 +7227,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 41.91 138.43 0)
 			(effects
 				(font
@@ -7391,7 +7391,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 110.49 152.4 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -7401,7 +7401,7 @@
 		(fields_autoplaced yes)
 		(uuid "9ea8fb62-3549-43c5-a040-05c30bad4843")
 		(property "Reference" "S15"
-			(at 110.49 144.78 0)
+			(at 110.49 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7417,7 +7417,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 110.49 152.4 0)
 			(effects
 				(font
@@ -7581,7 +7581,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 87.63 124.46 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -7591,7 +7591,7 @@
 		(fields_autoplaced yes)
 		(uuid "a2b9af9e-3967-401b-b972-a4981911a647")
 		(property "Reference" "S3"
-			(at 87.63 116.84 0)
+			(at 87.63 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7607,7 +7607,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 87.63 124.46 0)
 			(effects
 				(font
@@ -7771,7 +7771,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 201.93 48.26 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -7895,7 +7895,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 201.93 48.26 0)
+			(at 204.216 37.338 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7976,7 +7976,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 64.77 124.46 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -7986,7 +7986,7 @@
 		(fields_autoplaced yes)
 		(uuid "a8bc4d59-87c0-4488-b872-5f5822bb3493")
 		(property "Reference" "S2"
-			(at 64.77 116.84 0)
+			(at 64.77 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8002,7 +8002,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 64.77 124.46 0)
 			(effects
 				(font
@@ -8166,7 +8166,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 110.49 166.37 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -8176,7 +8176,7 @@
 		(fields_autoplaced yes)
 		(uuid "af63e726-1224-49d0-b6b9-1a7107b2922b")
 		(property "Reference" "S16"
-			(at 110.49 158.75 0)
+			(at 110.49 161.29 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8192,7 +8192,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 110.49 166.37 0)
 			(effects
 				(font
@@ -8356,7 +8356,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 87.63 138.43 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -8366,7 +8366,7 @@
 		(fields_autoplaced yes)
 		(uuid "b30c4aad-b064-411c-a703-c46a17446268")
 		(property "Reference" "S7"
-			(at 87.63 130.81 0)
+			(at 87.63 133.35 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8382,7 +8382,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 87.63 138.43 0)
 			(effects
 				(font
@@ -8546,7 +8546,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Esp32:ESP32-DEVKIT-V1")
+		(lib_id "BLEDeck:ESP32-DEVKIT-V1")
 		(at 55.88 71.12 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -8571,7 +8571,7 @@
 				)
 			)
 		)
-		(property "Footprint" "BLEDeck:MODULE_ESP32_DEVKIT_V1"
+		(property "Footprint" "ESP32-DEVKIT-V1:MODULE_ESP32_DEVKIT_V1"
 			(at 55.88 71.12 0)
 			(effects
 				(font
@@ -8819,7 +8819,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 176.53 73.66 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -8943,7 +8943,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 176.53 73.66 0)
+			(at 178.816 62.738 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9024,7 +9024,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 41.91 166.37 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -9034,7 +9034,7 @@
 		(fields_autoplaced yes)
 		(uuid "c5bac389-c3b4-4e4d-85eb-e2a4763b57c5")
 		(property "Reference" "S10"
-			(at 41.91 158.75 0)
+			(at 41.91 161.29 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9050,7 +9050,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 41.91 166.37 0)
 			(effects
 				(font
@@ -9214,7 +9214,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 87.63 166.37 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -9224,7 +9224,7 @@
 		(fields_autoplaced yes)
 		(uuid "cca5f80d-eb3c-4545-aa16-df06c429cbd5")
 		(property "Reference" "S14"
-			(at 87.63 158.75 0)
+			(at 87.63 161.29 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9240,7 +9240,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 87.63 166.37 0)
 			(effects
 				(font
@@ -9404,7 +9404,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 110.49 138.43 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -9414,7 +9414,7 @@
 		(fields_autoplaced yes)
 		(uuid "d38d7c41-3924-49e6-950d-5b2f041b0814")
 		(property "Reference" "S8"
-			(at 110.49 130.81 0)
+			(at 110.49 133.35 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9430,7 +9430,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 110.49 138.43 0)
 			(effects
 				(font
@@ -9594,7 +9594,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 41.91 152.4 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -9604,7 +9604,7 @@
 		(fields_autoplaced yes)
 		(uuid "dfc97dbf-2924-465c-ac3b-1ed5b86b5809")
 		(property "Reference" "S9"
-			(at 41.91 144.78 0)
+			(at 41.91 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9620,7 +9620,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 41.91 152.4 0)
 			(effects
 				(font
@@ -9811,7 +9811,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical"
+		(property "Footprint" "BLEDeck:PinHeader_1x02_P2.54mm_Vertical"
 			(at 109.22 49.53 0)
 			(effects
 				(font
@@ -9854,7 +9854,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 64.77 138.43 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -9864,7 +9864,7 @@
 		(fields_autoplaced yes)
 		(uuid "e92b8ad0-c356-4d58-b673-df2bc36315dd")
 		(property "Reference" "S6"
-			(at 64.77 130.81 0)
+			(at 64.77 133.35 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9880,7 +9880,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 64.77 138.43 0)
 			(effects
 				(font
@@ -10044,7 +10044,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 227.33 99.06 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -10168,7 +10168,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 227.33 99.06 0)
+			(at 229.616 88.138 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10249,7 +10249,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 201.93 124.46 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -10373,7 +10373,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 201.93 124.46 0)
+			(at 204.216 113.538 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10454,7 +10454,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 41.91 124.46 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -10464,7 +10464,7 @@
 		(fields_autoplaced yes)
 		(uuid "f051d6a0-8905-4665-aa1a-1d68de3fb039")
 		(property "Reference" "S1"
-			(at 41.91 116.84 0)
+			(at 41.91 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10480,7 +10480,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 41.91 124.46 0)
 			(effects
 				(font
@@ -10644,7 +10644,7 @@
 		)
 	)
 	(symbol
-		(lib_id "PG151101S11:PG151101S11")
+		(lib_id "BLEDeck:PG151101S11")
 		(at 64.77 166.37 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -10654,7 +10654,7 @@
 		(fields_autoplaced yes)
 		(uuid "f1940e69-cd86-4f51-9f4d-4e9105b1b2cb")
 		(property "Reference" "S12"
-			(at 64.77 158.75 0)
+			(at 64.77 161.29 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10670,7 +10670,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector:Kailh_socket_MX"
+		(property "Footprint" "PG151101S11:SW_PG151101S11"
 			(at 64.77 166.37 0)
 			(effects
 				(font
@@ -10834,7 +10834,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:WS2812B-4020")
+		(lib_id "BLEDeck:WS2812B-4020")
 		(at 252.73 48.26 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -10958,7 +10958,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/WS2812B-4020/Worldsemi/view-part/?ref=snap"
-			(at 252.73 48.26 0)
+			(at 255.016 37.338 0)
 			(effects
 				(font
 					(size 1.27 1.27)
