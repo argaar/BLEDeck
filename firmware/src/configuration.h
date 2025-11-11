@@ -13,6 +13,7 @@
 #define DI_ENCODER_B            GPIO_NUM_34
 #define DI_ENCODER_CON          GPIO_NUM_36
 #define DI_ENCODER_BACK         GPIO_NUM_39
+#define DI_ENCODER_PUSH         GPIO_NUM_27
 #define BUTTON_DEBOUNCE_MS      50
 
 // Keys
@@ -26,7 +27,7 @@
 #define COL_PIN_4               GPIO_NUM_5
 
 // RGB
-#define RGB_PIN                 GPIO_NUM_27
+#define RGB_PIN                 GPIO_NUM_14
 #define RGB_NUM                 1
 
 #endif // CONFIGURATION_H

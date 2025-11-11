@@ -4,6 +4,12 @@
 	(generator_version "9.0")
 	(uuid "8bba6075-8a84-4835-a7b9-00f9c9f191ba")
 	(paper "A4")
+	(title_block
+		(title "BLEDeck")
+		(date "2025-11-11")
+		(rev "1.0")
+		(company "Davide \"Argaar\" Foschi")
+	)
 	(lib_symbols
 		(symbol "Connector:Conn_01x02_Socket"
 			(pin_names
@@ -9805,7 +9811,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical"
 			(at 109.22 49.53 0)
 			(effects
 				(font
