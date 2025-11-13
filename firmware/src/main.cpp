@@ -12,6 +12,7 @@
 #include <BLE2902.h>
 #include <images.h>
 #include <NeoPixelBus.h>
+#include <vector>
 
 // Prefs
 Preferences prefs;
@@ -22,10 +23,44 @@ const int MAX_PROFILES = 10;  // Support up to 10 profiles
 String profileNames[MAX_PROFILES] = {"Default"};  // Initialize first profile, rest will be set by app
 int profileCount = 1;  // Track number of profiles received from app
 
+// Misc
+bool workstationLocked = false;
+
+void splitStringToVector(const String &input, char delimiter, std::vector<String> &output) {
+  output.clear();  // Make sure the vector is empty before populating
+  int start = 0;
+  int end = 0;
+
+  while (true) {
+    end = input.indexOf(delimiter, start);
+    if (end == -1) {
+      // Last element
+      output.push_back(input.substring(start));
+      break;
+    } else {
+      output.push_back(input.substring(start, end));
+      start = end + 1;
+    }
+  }
+}
+
+void splitColorsString(String data, char delimiter, int *result, int expectedParts) {
+  int start = 0;
+  int end = 0;
+
+  for (int i = 0; i < expectedParts; i++) {
+    end = data.indexOf(delimiter, start);
+    if (end == -1) end = data.length(); // last part
+
+    result[i] = data.substring(start, end).toInt();
+    start = end + 1;
+  }
+}
+
 // OLED
 SSD1306Wire * display;
 
-void updateOLED(int profile) {
+void oledUpdateProfile(int profile) {
   display->clear();
   char profile_string[40];
   snprintf(profile_string, sizeof(profile_string), "Profile: %s", profileNames[profile]);
@@ -34,15 +69,62 @@ void updateOLED(int profile) {
   Serial.println(profile_string);
 }
 
+void oledUpdateLockedStatus() {
+  if (workstationLocked) {
+    display->clear();
+    display->drawXbm((display->getWidth()-LOCK_IMAGE_WIDTH)/2, (display->getHeight()-LOCK_IMAGE_HEIGHT)/2, LOCK_IMAGE_WIDTH, LOCK_IMAGE_HEIGHT, LOCK_IMAGE);
+    display->display();
+  } else {
+    oledUpdateProfile(currentProfile);
+  }
+}
+
 // RGB
 NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> rgb_keys(RGB_NUM, RGB_PIN);
+
+std::vector<String> rgbColors = {
+  "128,0,0,25",
+  "230,25,75,47",
+  "245,130,48,70",
+  "170,110,40,50",
+  "210,245,60,87",
+  "60,180,75,69",
+  "0,128,128,50",
+  "0,130,200,47",
+  "0,0,128,6",
+  "145,30,180,38",
+  "240,50,230,58",
+  "230,190,255,85",
+  "250,190,190,83",
+  "255,250,200,96",
+  "128,128,128,50",
+  "70,240,240,88"
+};
+
+void rgbUpdateColors(const std::vector<String>& colorArray, int idx = 99) {
+  if (idx==99) {// we want to update in bulk since 99 is an out of range number
+    for (int i=0; i<colorArray.size(); i++) {
+      int values[4];
+      String colors = colorArray[i];
+      splitColorsString(colors, ',', values, 4);
+      RgbColor color = RgbColor(values[0], values[1], values[2]);
+      rgb_keys.SetPixelColor(i, color.Dim(map(values[3], 0, 100, 0, 255)));
+    }
+  } else {
+    int values[4];
+    String colors = colorArray[idx];
+    splitColorsString(colors, ',', values, 4);
+    RgbColor color = RgbColor(values[0], values[1], values[2]);
+    rgb_keys.SetPixelColor(idx, color.Dim(map(values[3], 0, 100, 0, 255)));
+  }
+  rgb_keys.Show(); 
+}
 
 // BLE Connection Management
 BLEServer* pServer;
 BLECharacteristic* pTxCharacteristic;
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
-bool oledDimmed = false;
 unsigned long lastPingTime = 0;
 unsigned long connectionStartTime = 0;
 
@@ -55,6 +137,11 @@ void sendNotify(const String &msg) {
   
   if (!pTxCharacteristic) {
     Serial.println("Cannot send - characteristic not available");
+    return;
+  }
+
+  if (workstationLocked) {
+    Serial.println("Workstation Locked - no actions allowed");
     return;
   }
   
@@ -92,7 +179,7 @@ void applyProfileFromPC(int idx) {
   prefs.begin("bledeck", false);
   prefs.putInt("currentprofile", currentProfile);
   prefs.end();
-  updateOLED(currentProfile);
+  oledUpdateProfile(currentProfile);
   Serial.printf("Applied SET_PROFILE from PC -> %d (%s)\n", idx, profileNames[idx].c_str());
   sendNotify("ACK:SET_PROFILE:" + String(idx));
   sendNotify("PROFILE:" + String(idx));
@@ -164,7 +251,7 @@ class RxCallbacks : public BLECharacteristicCallbacks {
           Serial.printf("Updated profile %d: '%s' (total profiles: %d)\n", idx, name.c_str(), profileCount);
           
           // Update OLED if this is the current profile
-          if (idx == currentProfile) updateOLED(currentProfile);
+          if (idx == currentProfile) oledUpdateProfile(currentProfile);
           
           // Send acknowledgment
           sendNotify("ACK:PROFILE_NAME:" + String(idx));
@@ -176,13 +263,24 @@ class RxCallbacks : public BLECharacteristicCallbacks {
     else if (msg.startsWith("LOCKED:")) {
       String v = msg.substring(7);
       if (v == "1") {
-        oledDimmed = true;
-        display->setContrast(0);
+        workstationLocked = true;
+        display->setBrightness(50);
+        oledUpdateLockedStatus();
       } else {
-        oledDimmed = false;
-        display->setContrast(100);
-        updateOLED(currentProfile);
+        workstationLocked = false;
+        display->setBrightness(100);
+        oledUpdateProfile(currentProfile);
       }
+    }
+    else if (msg.startsWith("KEYRGB:")) {
+      String idx = msg.substring(7,9);
+      std::vector<String> colors = {msg.substring(10)};
+      rgbUpdateColors(colors, idx.toInt());
+    }
+    else if (msg.startsWith("ALLRGB:")) {
+      std::vector<String> colors;
+      splitStringToVector(msg.substring(7), '-', colors);
+      rgbUpdateColors(colors);
     }
     else if (msg.startsWith("PING")) {
       sendAckPing();
@@ -200,12 +298,18 @@ class RxCallbacks : public BLECharacteristicCallbacks {
 // ENCODER
 Bounce2::Button btn_encoder_con = Bounce2::Button();
 Bounce2::Button btn_encoder_back = Bounce2::Button();
+Bounce2::Button btn_encoder_push = Bounce2::Button();
 RotaryEncoder rotaryEncoder( DI_ENCODER_A, DI_ENCODER_B, -1 );
 
 volatile bool turnedRightFlag = false;
 volatile bool turnedLeftFlag = false;
 
 void knobCallback( long value ) {
+  if (workstationLocked) {
+    Serial.println("Workstation Locked - no actions allowed");
+    return;
+  }
+
 	if( turnedRightFlag || turnedLeftFlag )
 		return;
 
@@ -270,6 +374,10 @@ void setup() {
   btn_encoder_back.interval(BUTTON_DEBOUNCE_MS);
   btn_encoder_back.setPressedState(LOW);
 
+  btn_encoder_push.attach(DI_ENCODER_PUSH, INPUT_PULLUP);
+  btn_encoder_push.interval(BUTTON_DEBOUNCE_MS);
+  btn_encoder_push.setPressedState(LOW);
+
   // BLE with improved configuration
   BLEDevice::init("BLEDeck");
   
@@ -306,7 +414,10 @@ void setup() {
   prefs.begin("bledeck", true);
   currentProfile = prefs.getInt("currentprofile", 0);
   prefs.end();
-  updateOLED(currentProfile);
+  oledUpdateProfile(currentProfile);
+
+  // RGB
+  rgbUpdateColors(rgbColors);
 
   Serial.println("Firmware ready - Advertising started");
   lastPingTime = millis();
@@ -315,16 +426,7 @@ void setup() {
 void loop() {
   btn_encoder_con.update();
   btn_encoder_back.update();
-
-  for(int i=0; i<5; i++) {
-    int mR = random(0, 250);
-    int mG = random(0, 250);
-    int mB = random(0, 250);
-    Serial.println("R:" + String(mR) + " G:" + String(mG) + " B:" + String(mB));
-    rgb_keys.SetPixelColor(0, RgbColor(mR, mG, mB));
-    rgb_keys.Show();   // Send the updated pixel colors to the hardware.
-    delay(500); // Pause before next pass through loop
-  }
+  btn_encoder_push.update();
 
   // Handle connection state changes
   if (!deviceConnected && oldDeviceConnected) {
@@ -356,8 +458,13 @@ void loop() {
     sendNotify("BACK");
   }
 
+  if (btn_encoder_push.pressed()){
+    Serial.println("PUSH PRESSED");
+    sendNotify("PUSH");
+  }
+
   char key = keypad->getKey();
-  if (key) {
+  if (key && !workstationLocked) {
     Serial.println(key);
     String key_s(key);
     sendNotify(key_s);
@@ -372,7 +479,7 @@ void loop() {
     }
     
     Serial.printf("Profile changed to: %d (%s)\n", currentProfile, profileNames[currentProfile].c_str());
-    updateOLED(currentProfile);
+    oledUpdateProfile(currentProfile);
     
     // Send profile change notification if connected
     if (deviceConnected) {
@@ -390,7 +497,7 @@ void loop() {
     }
     
     Serial.printf("Profile changed to: %d (%s)\n", currentProfile, profileNames[currentProfile].c_str());
-    updateOLED(currentProfile);
+    oledUpdateProfile(currentProfile);
     
     // Send profile change notification if connected
     if (deviceConnected) {
