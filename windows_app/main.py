@@ -162,7 +162,7 @@ class BLEDeckGUI(QMainWindow):
         # Data
         self.profiles = load_profiles()
         self.key_buttons = {}
-        self.key_actions = {}
+        self.key_configs = {}
 
         # Setup UI
         self.setup_ui()
@@ -409,11 +409,11 @@ class BLEDeckGUI(QMainWindow):
     def load_current_profile(self):
         if self.current_profile_index < len(self.profiles):
             profile = self.profiles[self.current_profile_index]
-            self.key_actions = profile.get('keys', {})
+            self.key_configs = profile.get('keys', {})
 
             # Convert string keys to int keys
-            if isinstance(list(self.key_actions.keys())[0] if self.key_actions else None, str):
-                self.key_actions = {int(k): v for k, v in self.key_actions.items()}
+            if isinstance(list(self.key_configs.keys())[0] if self.key_configs else None, str):
+                self.key_configs = {int(k): v for k, v in self.key_configs.items()}
 
             # Update profile name input
             profile_name = profile.get('name', f'Profile {self.current_profile_index}')
@@ -424,7 +424,7 @@ class BLEDeckGUI(QMainWindow):
 
             # Update all button labels and colors
             for key_id, btn in self.key_buttons.items():
-                key_data = self.key_actions.get(key_id, {})
+                key_data = self.key_configs.get(key_id, {})
                 btn.set_label(key_data.get('label', ''))
                 btn.set_color(key_data.get('color', ''))
     
@@ -441,7 +441,7 @@ class BLEDeckGUI(QMainWindow):
         self.selected_key_label.setText(f"Selected Key: {key_name} (ID: {key_id})")
 
         # Load existing data for this key
-        key_data = self.key_actions.get(key_id, {})
+        key_data = self.key_configs.get(key_id, {})
         self.label_input.setText(key_data.get('label', ''))
         self.color_input.setText(key_data.get('color', ''))
         self.command_input.setText(key_data.get('command', ''))
@@ -463,27 +463,27 @@ class BLEDeckGUI(QMainWindow):
     def on_label_changed(self, text):
         if self.selected_key_id is not None:
             self.ensure_key_data_exists()
-            self.key_actions[self.selected_key_id]['label'] = text.strip()
+            self.key_configs[self.selected_key_id]['label'] = text.strip()
             # Update button label
             self.key_buttons[self.selected_key_id].set_label(text.strip())
 
     def on_color_changed(self, text):
         if self.selected_key_id is not None:
             self.ensure_key_data_exists()
-            self.key_actions[self.selected_key_id]['color'] = text.strip()
+            self.key_configs[self.selected_key_id]['color'] = text.strip()
             # Update button color
             self.key_buttons[self.selected_key_id].set_color(text.strip())
 
     def on_command_changed(self, text):
         if self.selected_key_id is not None:
             self.ensure_key_data_exists()
-            self.key_actions[self.selected_key_id]['command'] = text.strip()
+            self.key_configs[self.selected_key_id]['command'] = text.strip()
 
     def ensure_key_data_exists(self):
         """Ensure the selected key has a dictionary entry"""
         if self.selected_key_id is not None:
-            if self.selected_key_id not in self.key_actions:
-                self.key_actions[self.selected_key_id] = {'label': '', 'color': '', 'command': ''}
+            if self.selected_key_id not in self.key_configs:
+                self.key_configs[self.selected_key_id] = {'label': '', 'color': '', 'command': ''}
 
     def open_color_picker(self):
         """Open color picker dialog"""
@@ -543,7 +543,24 @@ class BLEDeckGUI(QMainWindow):
         profile_count = len(self.profiles) + 1
         new_profile = {
             "name": f"New Profile {profile_count}",
-            "keys": {}
+            "keys": {
+                "0": {"label": "", "color": "", "command": ""},
+                "1": {"label": "", "color": "", "command": ""},
+                "2": {"label": "", "color": "", "command": ""},
+                "3": {"label": "", "color": "", "command": ""},
+                "4": {"label": "", "color": "", "command": ""},
+                "5": {"label": "", "color": "", "command": ""},
+                "6": {"label": "", "color": "", "command": ""},
+                "7": {"label": "", "color": "", "command": ""},
+                "8": {"label": "", "color": "", "command": ""},
+                "9": {"label": "", "color": "", "command": ""},
+                "10": {"label": "", "color": "", "command": ""},
+                "11": {"label": "", "color": "", "command": ""},
+                "12": {"label": "", "color": "", "command": ""},
+                "13": {"label": "", "color": "", "command": ""},
+                "14": {"label": "", "color": "", "command": ""},
+                "15": {"label": "", "color": "", "command": ""}
+            }
         }
 
         # Add to profiles list
@@ -551,7 +568,7 @@ class BLEDeckGUI(QMainWindow):
 
         # Switch to the new profile
         self.current_profile_index = len(self.profiles) - 1
-        self.key_actions = {}
+        self.key_configs = {}
 
         # Update UI
         self.update_profile_combo()
@@ -587,7 +604,7 @@ class BLEDeckGUI(QMainWindow):
         profile['name'] = new_name
         # Convert int keys to string keys for JSON serialization, filtering out empty keys
         filtered_keys = {}
-        for k, v in self.key_actions.items():
+        for k, v in self.key_configs.items():
             # Only save if at least command is not empty
             if v.get('command', '').strip():
                 filtered_keys[str(k)] = v

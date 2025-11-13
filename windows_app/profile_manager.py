@@ -12,7 +12,20 @@ def load_profiles():
                 "keys": {
                     "0": {"label": "Notepad", "color": "100,150,255,70", "command": "notepad.exe"},
                     "1": {"label": "Calculator", "color": "255,100,100,70", "command": "calc.exe"},
-                    "2": {"label": "Explorer", "color": "100,255,100,70", "command": "explorer.exe"}
+                    "2": {"label": "Explorer", "color": "100,255,100,70", "command": "explorer.exe"},
+                    "3": {"label": "", "color": "", "command": ""},
+                    "4": {"label": "", "color": "", "command": ""},
+                    "5": {"label": "", "color": "", "command": ""},
+                    "6": {"label": "", "color": "", "command": ""},
+                    "7": {"label": "", "color": "", "command": ""},
+                    "8": {"label": "", "color": "", "command": ""},
+                    "9": {"label": "", "color": "", "command": ""},
+                    "10": {"label": "", "color": "", "command": ""},
+                    "11": {"label": "", "color": "", "command": ""},
+                    "12": {"label": "", "color": "", "command": ""},
+                    "13": {"label": "", "color": "", "command": ""},
+                    "14": {"label": "", "color": "", "command": ""},
+                    "15": {"label": "", "color": "", "command": ""}
                 }
             }
         ]
