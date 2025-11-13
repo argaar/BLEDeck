@@ -473,6 +473,8 @@ class BLEDeckGUI(QMainWindow):
             self.key_configs[self.selected_key_id]['color'] = text.strip()
             # Update button color
             self.key_buttons[self.selected_key_id].set_color(text.strip())
+            # Send notification to change single RGB on BLEDeck
+            self.send_rgb(color=text.strip())
 
     def on_command_changed(self, text):
         if self.selected_key_id is not None:
@@ -648,7 +650,21 @@ class BLEDeckGUI(QMainWindow):
                 QIcon("icon.ico"),
                 500
             )
+        # Send back the colors
+        self.send_rgb()
     
+    def send_rgb(self, color = None):
+        msg = ""
+        if color:
+            msg = f"KEYRGB:{self.selected_key_id:02}:{color}"
+        else:
+            all_colors = []
+            for key in self.profiles[self.current_profile_index]["keys"]:
+                color = self.profiles[self.current_profile_index]["keys"][key].get('color')
+                all_colors.append(color if color else '0,0,0,0')
+            msg = f"ALLRGB:{"-".join(all_colors)}"
+        asyncio.create_task(self.send_ble(msg))
+
     def delete_current_profile(self):
         if len(self.profiles) <= 1:
             QMessageBox.warning(self, "Cannot Delete", "Cannot delete the last profile. At least one profile must exist.")
@@ -863,6 +879,8 @@ class BLEDeckGUI(QMainWindow):
         msg = f"SET_PROFILE:{self.current_profile_index}"
         await self.send_ble(msg)
         self.log(f"📁 Set device profile to: {self.current_profile_index}")
+        # Send back the colors
+        self.send_rgb()
     
     def send_ping(self):
         if self.is_connected:
