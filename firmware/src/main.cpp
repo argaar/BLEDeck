@@ -62,11 +62,16 @@ SSD1306Wire * display;
 
 void oledUpdateProfile(int profile) {
   display->clear();
-  char profile_string[40];
-  snprintf(profile_string, sizeof(profile_string), "Profile: %s", profileNames[profile]);
-  display->drawString(0, 0, profile_string);
+  char profile_text[17];
+  snprintf(profile_text, sizeof(profile_text), "Current profile:");
+  char profile_name[40];
+  snprintf(profile_name, sizeof(profile_name), "%s", profileNames[profile]);
+  display->setFont(ArialMT_Plain_16);
+  display->drawString(0, 0, profile_text);
+  display->setFont(ArialMT_Plain_24);
+  display->drawString(0, 25, profile_name);
   display->display();
-  Serial.println(profile_string);
+  Serial.println(profile_name);
 }
 
 void oledUpdateLockedStatus() {
@@ -409,7 +414,7 @@ void setup() {
   pAdvertising->setMinPreferred(0x0);
   pAdvertising->setMinPreferred(0x1F);
   pServer->getAdvertising()->start();
-
+  
   // Profiles
   prefs.begin("bledeck", true);
   currentProfile = prefs.getInt("currentprofile", 0);
@@ -424,6 +429,7 @@ void setup() {
 }
 
 void loop() {
+
   btn_encoder_con.update();
   btn_encoder_back.update();
   btn_encoder_push.update();
