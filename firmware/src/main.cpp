@@ -13,6 +13,10 @@
 #include <images.h>
 #include <NeoPixelBus.h>
 #include <vector>
+#include "protocolparser.h"
+
+// Protocol Parser
+ProtocolParser parser;
 
 // Prefs
 Preferences prefs;
@@ -22,6 +26,14 @@ int currentProfile = 0;
 const int MAX_PROFILES = 10;  // Support up to 10 profiles
 String profileNames[MAX_PROFILES] = {"Default"};  // Initialize first profile, rest will be set by app
 int profileCount = 1;  // Track number of profiles received from app
+
+// BLE Connection Management
+BLEServer* pServer;
+BLECharacteristic* pTxCharacteristic;
+bool deviceConnected = false;
+bool oldDeviceConnected = false;
+unsigned long lastPingTime = 0;
+unsigned long connectionStartTime = 0;
 
 // Misc
 bool workstationLocked = false;
@@ -60,16 +72,24 @@ void splitColorsString(String data, char delimiter, int *result, int expectedPar
 // OLED
 SSD1306Wire * display;
 
-void oledUpdateProfile(int profile) {
+void oledUpdate(int profile) {
   display->clear();
+
   char profile_text[17];
   snprintf(profile_text, sizeof(profile_text), "Current profile:");
-  char profile_name[40];
-  snprintf(profile_name, sizeof(profile_name), "%s", profileNames[profile]);
   display->setFont(ArialMT_Plain_16);
   display->drawString(0, 0, profile_text);
+
+  char profile_name[40];
+  snprintf(profile_name, sizeof(profile_name), "%s", profileNames[profile]);
   display->setFont(ArialMT_Plain_24);
-  display->drawString(0, 25, profile_name);
+  display->drawString(0, 18, profile_name);
+
+  char bt_status[40];
+  snprintf(bt_status, sizeof(bt_status), "Bluetooth %s", deviceConnected ? "CONNECTED" : "DISCONNECTED");
+  display->setFont(ArialMT_Plain_10);
+  display->drawString(0, 50, bt_status);
+  
   display->display();
   Serial.println(profile_name);
 }
@@ -80,14 +100,15 @@ void oledUpdateLockedStatus() {
     display->drawXbm((display->getWidth()-LOCK_IMAGE_WIDTH)/2, (display->getHeight()-LOCK_IMAGE_HEIGHT)/2, LOCK_IMAGE_WIDTH, LOCK_IMAGE_HEIGHT, LOCK_IMAGE);
     display->display();
   } else {
-    oledUpdateProfile(currentProfile);
+    oledUpdate(currentProfile);
   }
 }
 
 // RGB
 NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> rgb_keys(RGB_NUM, RGB_PIN);
 
-std::vector<String> rgbColors = {
+// Default RGB colors
+const std::vector<String> defaultRgbColors = {
   "128,0,0,25",
   "230,25,75,47",
   "245,130,48,70",
@@ -105,6 +126,8 @@ std::vector<String> rgbColors = {
   "128,128,128,50",
   "70,240,240,88"
 };
+
+std::vector<String> rgbColors = defaultRgbColors;
 
 void rgbUpdateColors(const std::vector<String>& colorArray, int idx = 99) {
   if (idx==99) {// we want to update in bulk since 99 is an out of range number
@@ -125,53 +148,80 @@ void rgbUpdateColors(const std::vector<String>& colorArray, int idx = 99) {
   rgb_keys.Show(); 
 }
 
-// BLE Connection Management
-BLEServer* pServer;
-BLECharacteristic* pTxCharacteristic;
-bool deviceConnected = false;
-bool oldDeviceConnected = false;
-unsigned long lastPingTime = 0;
-unsigned long connectionStartTime = 0;
-
 // BLE Send Helpers
-void sendNotify(const String &msg) {
+void sendBinaryPacket(uint8_t opcode, const uint8_t* payload, uint16_t payloadLen) {
   if (!deviceConnected) {
     Serial.println("Cannot send - device not connected");
     return;
   }
-  
+
   if (!pTxCharacteristic) {
     Serial.println("Cannot send - characteristic not available");
     return;
   }
 
-  if (workstationLocked) {
-    Serial.println("Workstation Locked - no actions allowed");
-    return;
+  // Build packet: START + OPCODE + LENGTH(2B) + PAYLOAD
+  uint8_t packet[4 + payloadLen];
+  packet[0] = START_BYTE;
+  packet[1] = opcode;
+  packet[2] = (payloadLen >> 8) & 0xFF;  // Length high byte
+  packet[3] = payloadLen & 0xFF;          // Length low byte
+
+  if (payloadLen > 0 && payload != nullptr) {
+    memcpy(packet + 4, payload, payloadLen);
   }
-  
+
   try {
-    String out;
-    // For PROFILE: messages, don't prepend profile name (it's the profile index)
-    if (msg.startsWith("PROFILE:") || msg.startsWith("ACK:")) {
-      out = msg;
-    } else {
-      // For key presses and other messages, prepend current profile name
-      out = profileNames[currentProfile] + ";" + msg;
-    }
-    
-    pTxCharacteristic->setValue(out.c_str());
+    pTxCharacteristic->setValue(packet, 4 + payloadLen);
     pTxCharacteristic->notify();
-    Serial.printf("TX -> %s\n", out.c_str());
+    Serial.printf("TX -> Opcode: 0x%02X, Length: %d\n", opcode, payloadLen);
   } catch (...) {
     Serial.println("Error sending notification");
     deviceConnected = false;
   }
 }
 
-void sendAckPing() {
-  sendNotify("ACK:PING");
+void sendKeepAliveReply() {
+  sendBinaryPacket(OP_KEEP_ALIVE_REPLY, nullptr, 0);
   lastPingTime = millis();
+}
+
+void sendProfileChanged(uint8_t profileIndex) {
+  if (workstationLocked) {
+    Serial.println("Workstation Locked - no actions allowed");
+    return;
+  }
+  sendBinaryPacket(OP_PROFILE_CHANGED, &profileIndex, 1);
+}
+
+void sendButtonPressed(const char* buttonName) {
+  if (workstationLocked) {
+    Serial.println("Workstation Locked - no actions allowed");
+    return;
+  }
+
+  // Payload: profile_index(1B) + button_name_length(1B) + button_name
+  uint8_t nameLen = strlen(buttonName);
+  uint8_t payload[2 + nameLen];
+  payload[0] = currentProfile;
+  payload[1] = nameLen;
+  memcpy(payload + 2, buttonName, nameLen);
+
+  sendBinaryPacket(OP_BUTTON_PRESSED, payload, 2 + nameLen);
+}
+
+void sendKeyPressed(char key) {
+  if (workstationLocked) {
+    Serial.println("Workstation Locked - no actions allowed");
+    return;
+  }
+
+  // Payload: profile_index(1B) + key(1B)
+  uint8_t payload[2];
+  payload[0] = currentProfile;
+  payload[1] = (uint8_t)key;
+
+  sendBinaryPacket(OP_KEY_PRESSED, payload, 2);
 }
 
 // BLE Functions
@@ -184,10 +234,205 @@ void applyProfileFromPC(int idx) {
   prefs.begin("bledeck", false);
   prefs.putInt("currentprofile", currentProfile);
   prefs.end();
-  oledUpdateProfile(currentProfile);
-  Serial.printf("Applied SET_PROFILE from PC -> %d (%s)\n", idx, profileNames[idx].c_str());
-  sendNotify("ACK:SET_PROFILE:" + String(idx));
-  sendNotify("PROFILE:" + String(idx));
+  oledUpdate(currentProfile);
+  Serial.printf("Applied CHANGE_PROFILE from PC -> %d (%s)\n", idx, profileNames[idx].c_str());
+  sendProfileChanged(idx);
+}
+
+// Handle incoming binary protocol packets
+void handlePacket(const ParsedPacket &pkt) {
+  Serial.printf("RX <- Opcode: 0x%02X, Length: %d\n", pkt.opcode, pkt.length);
+
+  // Reset ping timer on any received message
+  lastPingTime = millis();
+
+  switch (pkt.opcode) {
+    case OP_KEEP_ALIVE:
+      // Keep alive ping - send reply
+      sendKeepAliveReply();
+      break;
+
+    case OP_CHANGE_PROFILE: {
+      // Payload: profile_index(1B) + name_length(1B) + name + 16xRGBW(64B)
+      if (pkt.length < 2) {
+        Serial.println("Error: CHANGE_PROFILE packet too short");
+        break;
+      }
+
+      uint8_t profileIndex = pkt.payload[0];
+      uint8_t nameLength = pkt.payload[1];
+
+      if (pkt.length < 2 + nameLength + 64) {
+        Serial.println("Error: CHANGE_PROFILE packet incomplete");
+        break;
+      }
+
+      // Extract profile name
+      String profileName = "";
+      for (int i = 0; i < nameLength; i++) {
+        profileName += (char)pkt.payload[2 + i];
+      }
+
+      // Store profile name
+      if (profileIndex > 0 && profileIndex <= MAX_PROFILES) {
+        int idx = profileIndex - 1;  // Convert to 0-based index
+        profileNames[idx] = profileName;
+
+        // Update profile count
+        if (idx >= profileCount) {
+          profileCount = idx + 1;
+        }
+
+        Serial.printf("Stored profile %d: '%s'\n", profileIndex, profileName.c_str());
+
+        // Extract RGBW colors for 16 keys
+        int colorOffset = 2 + nameLength;
+        for (int i = 0; i < 16 && i < rgbColors.size(); i++) {
+          uint8_t r = pkt.payload[colorOffset + i * 4];
+          uint8_t g = pkt.payload[colorOffset + i * 4 + 1];
+          uint8_t b = pkt.payload[colorOffset + i * 4 + 2];
+          uint8_t w = pkt.payload[colorOffset + i * 4 + 3];
+
+          // Store as string in format "R,G,B,W"
+          rgbColors[i] = String(r) + "," + String(g) + "," + String(b) + "," + String(w);
+        }
+
+        // Apply the profile if it's being set as current
+        applyProfileFromPC(idx);
+        rgbUpdateColors(rgbColors);
+      } else {
+        Serial.printf("Error: Invalid profile index %d\n", profileIndex);
+      }
+      break;
+    }
+
+    case OP_SYNC_PROFILES: {
+      // Payload: count(1B) + [index(1B) + name_len(1B) + name]*count
+      if (pkt.length < 1) {
+        Serial.println("Error: SYNC_PROFILES packet too short");
+        break;
+      }
+
+      uint8_t count = pkt.payload[0];
+      Serial.printf("Syncing %d profiles\n", count);
+
+      int offset = 1;
+      for (int i = 0; i < count; i++) {
+        if (offset + 2 > pkt.length) break;
+
+        uint8_t profileIndex = pkt.payload[offset++];
+        uint8_t nameLen = pkt.payload[offset++];
+
+        if (offset + nameLen > pkt.length) break;
+
+        String name = "";
+        for (int j = 0; j < nameLen; j++) {
+          name += (char)pkt.payload[offset++];
+        }
+
+        // Store profile name
+        if (profileIndex > 0 && profileIndex <= MAX_PROFILES) {
+          int idx = profileIndex - 1;
+          profileNames[idx] = name;
+
+          if (idx >= profileCount) {
+            profileCount = idx + 1;
+          }
+
+          Serial.printf("Synced profile %d: '%s'\n", profileIndex, name.c_str());
+        }
+      }
+
+      // Update display with current profile
+      oledUpdate(currentProfile);
+      break;
+    }
+
+    case OP_SET_RGB_KEY: {
+      // Payload: profile_index(1B) + key_index(1B) + R(1B) + G(1B) + B(1B) + W(1B)
+      if (pkt.length != 6) {
+        Serial.println("Error: SET_RGB_KEY invalid length");
+        break;
+      }
+
+      uint8_t profileIndex = pkt.payload[0];
+      uint8_t keyIndex = pkt.payload[1];
+      uint8_t r = pkt.payload[2];
+      uint8_t g = pkt.payload[3];
+      uint8_t b = pkt.payload[4];
+      uint8_t w = pkt.payload[5];
+
+      // Validate indices
+      if (keyIndex >= 16 || keyIndex >= rgbColors.size()) {
+        Serial.printf("Error: Invalid key index %d\n", keyIndex);
+        break;
+      }
+
+      // Update the color for this key
+      rgbColors[keyIndex] = String(r) + "," + String(g) + "," + String(b) + "," + String(w);
+
+      Serial.printf("Set key %d to RGBW(%d,%d,%d,%d)\n", keyIndex, r, g, b, w);
+
+      // Update the LED immediately
+      rgbUpdateColors(rgbColors, keyIndex);
+      break;
+    }
+
+    case OP_SET_ALL_RGB_KEYS: {
+      // Payload: 16 x RGBW (64 bytes total)
+      if (pkt.length != 64) {
+        Serial.printf("Error: SET_ALL_RGB_KEYS invalid length (expected 64, got %d)\n", pkt.length);
+        break;
+      }
+
+      Serial.println("Setting all 16 RGB keys");
+
+      // Update all 16 keys
+      for (int i = 0; i < 16 && i < rgbColors.size(); i++) {
+        uint8_t r = pkt.payload[i * 4];
+        uint8_t g = pkt.payload[i * 4 + 1];
+        uint8_t b = pkt.payload[i * 4 + 2];
+        uint8_t w = pkt.payload[i * 4 + 3];
+
+        // Store as string in format "R,G,B,W"
+        rgbColors[i] = String(r) + "," + String(g) + "," + String(b) + "," + String(w);
+      }
+
+      // Update all LEDs at once
+      rgbUpdateColors(rgbColors);
+      Serial.println("All RGB keys updated");
+      break;
+    }
+
+    case OP_LOCK_DEVICE: {
+      // Payload: lock_flag(1B) - 0x01=lock, 0x00=unlock
+      if (pkt.length != 1) {
+        Serial.println("Error: LOCK_DEVICE invalid length");
+        break;
+      }
+
+      uint8_t lockFlag = pkt.payload[0];
+
+      if (lockFlag == 0x01) {
+        workstationLocked = true;
+        display->setBrightness(50);
+        oledUpdateLockedStatus();
+        Serial.println("Device LOCKED");
+      } else if (lockFlag == 0x00) {
+        workstationLocked = false;
+        display->setBrightness(100);
+        oledUpdate(currentProfile);
+        Serial.println("Device UNLOCKED");
+      } else {
+        Serial.printf("Error: Invalid lock flag 0x%02X\n", lockFlag);
+      }
+      break;
+    }
+
+    default:
+      Serial.printf("Unknown opcode: 0x%02X\n", pkt.opcode);
+      break;
+  }
 }
 
 // BLE Callbacks with improved connection handling
@@ -197,26 +442,44 @@ class ServerCallbacks : public BLEServerCallbacks {
     connectionStartTime = millis();
     lastPingTime = millis();
     Serial.println("BLE Connected");
-    
+
     // Set connection parameters for better stability
     // Note: Connection parameter updates are handled automatically by ESP32
   }
-  
+
   void onDisconnect(BLEServer* pServer) override {
     deviceConnected = false;
     oldDeviceConnected = true;
-    Serial.println("BLE Disconnected");
-    
+    Serial.println("BLE Disconnected - Resetting to default state");
+
+    // Reset to default state
+    currentProfile = 0;
+    profileCount = 1;
+
+    // Clear all profile names and reset to default
+    for (int i = 0; i < MAX_PROFILES; i++) {
+      profileNames[i] = (i == 0) ? "Default" : "";
+    }
+
+    // Reset RGB colors to default
+    rgbColors = defaultRgbColors;
+    rgbUpdateColors(rgbColors);
+
+    // Update OLED display
+    oledUpdate(currentProfile);
+
+    Serial.println("Reset complete - back to default profile");
+
     // Small delay before restarting advertising
     delay(500);
-    
+
     // Configure advertising with better parameters
     BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
     pAdvertising->addServiceUUID("4FAFC201-1FB5-459E-8FCC-C5C9C331914B");
     pAdvertising->setScanResponse(false);
     pAdvertising->setMinPreferred(0x0);
     pAdvertising->setMinPreferred(0x1F);
-    
+
     pServer->startAdvertising();
     Serial.println("Restarted advertising");
   }
@@ -226,76 +489,29 @@ class RxCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic* pCharacteristic) override {
     std::string rx = pCharacteristic->getValue();
     if (rx.empty()) return;
-    
-    String msg = String(rx.c_str());
-    msg.trim();
 
-    Serial.printf("RX <- %s\n", msg.c_str());
-
-    // Reset ping timer on any received message
-    lastPingTime = millis();
-
-    if (msg.startsWith("SET_PROFILE:")) {
-      int idx = msg.substring(12).toInt();
-      applyProfileFromPC(idx);
+    Serial.printf("BLE RX: %d bytes - ", rx.length());
+    // Print first 8 bytes for quick inspection
+    for (int i = 0; i < min((int)rx.length(), 8); i++) {
+        Serial.printf("%02X ", (uint8_t)rx[i]);
     }
-    else if (msg.startsWith("PROFILE_NAME:")) {
-      int sep = msg.indexOf('|');
-      if (sep > 0) {
-        int colon = msg.indexOf(':');
-        int idx = msg.substring(colon+1, sep).toInt();
-        String name = msg.substring(sep+1);
-        
-        if (idx >= 0 && idx < MAX_PROFILES) {
-          profileNames[idx] = name;
-          // Update profile count to include this profile
-          if (idx >= profileCount) {
-            profileCount = idx + 1;
-          }
-          
-          Serial.printf("Updated profile %d: '%s' (total profiles: %d)\n", idx, name.c_str(), profileCount);
-          
-          // Update OLED if this is the current profile
-          if (idx == currentProfile) oledUpdateProfile(currentProfile);
-          
-          // Send acknowledgment
-          sendNotify("ACK:PROFILE_NAME:" + String(idx));
-        } else {
-          Serial.printf("Invalid profile index: %d\n", idx);
+    Serial.println();
+
+    ParsedPacket pkt;
+    int packetCount = 0;
+
+    for (uint8_t b : rx) {
+        if (parser.feed(b, pkt)) {
+            packetCount++;
+            Serial.printf("Parsed packet #%d\n", packetCount);
+            handlePacket(pkt);
         }
-      }
     }
-    else if (msg.startsWith("LOCKED:")) {
-      String v = msg.substring(7);
-      if (v == "1") {
-        workstationLocked = true;
-        display->setBrightness(50);
-        oledUpdateLockedStatus();
-      } else {
-        workstationLocked = false;
-        display->setBrightness(100);
-        oledUpdateProfile(currentProfile);
-      }
-    }
-    else if (msg.startsWith("KEYRGB:")) {
-      String idx = msg.substring(7,9);
-      std::vector<String> colors = {msg.substring(10)};
-      rgbUpdateColors(colors, idx.toInt());
-    }
-    else if (msg.startsWith("ALLRGB:")) {
-      std::vector<String> colors;
-      splitStringToVector(msg.substring(7), '-', colors);
-      rgbUpdateColors(colors);
-    }
-    else if (msg.startsWith("PING")) {
-      sendAckPing();
-    }
-    else if (msg.startsWith("ACK:")) {
-      // Client acknowledged our ping
-      lastPingTime = millis();
-    }
-    else {
-      Serial.printf("Unknown command: %s\n", msg.c_str());
+
+    if (packetCount == 0) {
+        Serial.println("Warning: No complete packets parsed from received data");
+    } else {
+        Serial.printf("Successfully parsed %d packet(s)\n", packetCount);
     }
   }
 };
@@ -419,7 +635,7 @@ void setup() {
   prefs.begin("bledeck", true);
   currentProfile = prefs.getInt("currentprofile", 0);
   prefs.end();
-  oledUpdateProfile(currentProfile);
+  oledUpdate(currentProfile);
 
   // RGB
   rgbUpdateColors(rgbColors);
@@ -456,24 +672,23 @@ void loop() {
 
   if (btn_encoder_con.pressed()){
     Serial.println("CON PRESSED");
-    sendNotify("CON");
+    sendButtonPressed("CON");
   }
 
   if (btn_encoder_back.pressed()){
     Serial.println("BACK PRESSED");
-    sendNotify("BACK");
+    sendButtonPressed("BACK");
   }
 
   if (btn_encoder_push.pressed()){
     Serial.println("PUSH PRESSED");
-    sendNotify("PUSH");
+    sendButtonPressed("PUSH");
   }
 
   char key = keypad->getKey();
   if (key && !workstationLocked) {
     Serial.println(key);
-    String key_s(key);
-    sendNotify(key_s);
+    sendKeyPressed(key);
   }
 
   if (turnedRightFlag) {
@@ -483,14 +698,14 @@ void loop() {
     if (currentProfile >= profileCount) {
       currentProfile = 0;  // Wrap to first profile
     }
-    
+
     Serial.printf("Profile changed to: %d (%s)\n", currentProfile, profileNames[currentProfile].c_str());
-    oledUpdateProfile(currentProfile);
-    
+    oledUpdate(currentProfile);
+
     // Send profile change notification if connected
     if (deviceConnected) {
-      Serial.printf("Sending profile change notification: PROFILE:%d\n", currentProfile);
-      sendNotify("PROFILE:" + String(currentProfile));
+      Serial.printf("Sending profile change notification: %d\n", currentProfile);
+      sendProfileChanged(currentProfile);
     } else {
       Serial.println("Device not connected - skipping profile notification");
     }
@@ -501,14 +716,14 @@ void loop() {
     if (currentProfile < 0) {
       currentProfile = profileCount - 1;  // Wrap to last profile
     }
-    
+
     Serial.printf("Profile changed to: %d (%s)\n", currentProfile, profileNames[currentProfile].c_str());
-    oledUpdateProfile(currentProfile);
-    
+    oledUpdate(currentProfile);
+
     // Send profile change notification if connected
     if (deviceConnected) {
-      Serial.printf("Sending profile change notification: PROFILE:%d\n", currentProfile);
-      sendNotify("PROFILE:" + String(currentProfile));
+      Serial.printf("Sending profile change notification: %d\n", currentProfile);
+      sendProfileChanged(currentProfile);
     } else {
       Serial.println("Device not connected - skipping profile notification");
     }

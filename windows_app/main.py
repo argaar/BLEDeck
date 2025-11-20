@@ -12,6 +12,7 @@ from PyQt5.QtGui import QColor, QIcon
 
 from ble_client import BleakClient, DEVICE_NAME, CHAR_TX_UUID, CHAR_RX_UUID
 from profile_manager import load_profiles, save_profiles
+import ble_protocol
 
 class KeyButton(QPushButton):
     def __init__(self, key_id, text):
@@ -50,13 +51,28 @@ class KeyButton(QPushButton):
         """Set the color from a string like '220,0,0,70'"""
         if color_str:
             try:
-                parts = color_str.split(',')
+                parts = color_str.strip().split(',')
                 if len(parts) == 4:
-                    r, g, b, brightness = map(int, parts)
+                    # Filter out empty strings and convert to int
+                    values = []
+                    for p in parts:
+                        p = p.strip()
+                        if p == '':
+                            # Empty value, use default 0
+                            values.append(0)
+                        else:
+                            values.append(int(p))
+                    r, g, b, brightness = values
+                    # Clamp values to valid ranges
+                    r = max(0, min(255, r))
+                    g = max(0, min(255, g))
+                    b = max(0, min(255, b))
+                    brightness = max(0, min(100, brightness))
                     self.key_color = (r, g, b, brightness)
                 else:
                     self.key_color = None
-            except AttributeError:
+            except (ValueError, AttributeError) as e:
+                print(f"Warning: Invalid color string '{color_str}': {e}")
                 self.key_color = None
         else:
             self.key_color = None
@@ -623,11 +639,9 @@ class BLEDeckGUI(QMainWindow):
             asyncio.create_task(self.sync_single_profile(self.current_profile_index))
     
     async def sync_single_profile(self, profile_index):
-        """Sync a single profile name to the device"""
-        if profile_index < len(self.profiles):
-            profile_name = self.profiles[profile_index].get('name', f'Profile {profile_index}')
-            msg = f"PROFILE_NAME:{profile_index}|{profile_name}"
-            await self.send_ble(msg)
+        """Sync a single profile name to the device - with binary protocol we sync all"""
+        # With the binary protocol, we just resync all profiles
+        await self.synchronize_profiles_to_device()
     
     def sync_profile_from_device(self, device_profile_index):
         """Update app profile to match device profile (called when device encoder changes profile)"""
@@ -653,17 +667,81 @@ class BLEDeckGUI(QMainWindow):
         # Send back the colors
         self.send_rgb()
     
-    def send_rgb(self, color = None):
-        msg = ""
+    def send_rgb(self, color=None):
+        """Send RGB color(s) to device using binary protocol"""
         if color:
-            msg = f"KEYRGB:{self.selected_key_id:02}:{color}"
+            # Send single key color
+            try:
+                parts = color.strip().split(',')
+                if len(parts) == 4:
+                    # Parse and validate each value
+                    values = []
+                    for p in parts:
+                        p = p.strip()
+                        if p == '':
+                            values.append(0)
+                        else:
+                            values.append(int(p))
+                    r, g, b, w = values
+
+                    # Clamp to valid ranges
+                    r = max(0, min(255, r))
+                    g = max(0, min(255, g))
+                    b = max(0, min(255, b))
+                    w = max(0, min(100, w))
+
+                    packet = ble_protocol.set_rgb_key(
+                        self.current_profile_index,
+                        self.selected_key_id,
+                        r, g, b, w
+                    )
+                    asyncio.create_task(self.send_ble(packet))
+                else:
+                    self.log(f"⚠️ Invalid color format (expected R,G,B,W): {color}")
+            except (ValueError, IndexError) as e:
+                self.log(f"⚠️ Error parsing color '{color}': {e}")
+                return
         else:
-            all_colors = []
-            for key in self.profiles[self.current_profile_index]["keys"]:
-                color = self.profiles[self.current_profile_index]["keys"][key].get('color')
-                all_colors.append(color if color else '0,0,0,0')
-            msg = f"ALLRGB:{"-".join(all_colors)}"
-        asyncio.create_task(self.send_ble(msg))
+            # Send all 16 key colors
+            rgbw_list = []
+            profile_keys = self.profiles[self.current_profile_index].get("keys", {})
+
+            # Build list of 16 RGBW tuples in order (0-15)
+            for i in range(16):
+                key_data = profile_keys.get(str(i), {})
+                color_str = key_data.get('color', '0,0,0,0')
+
+                try:
+                    if color_str:
+                        parts = color_str.strip().split(',')
+                        if len(parts) == 4:
+                            # Parse and validate each value
+                            values = []
+                            for p in parts:
+                                p = p.strip()
+                                if p == '':
+                                    values.append(0)
+                                else:
+                                    values.append(int(p))
+                            r, g, b, w = values
+
+                            # Clamp to valid ranges
+                            r = max(0, min(255, r))
+                            g = max(0, min(255, g))
+                            b = max(0, min(255, b))
+                            w = max(0, min(100, w))
+
+                            rgbw_list.append((r, g, b, w))
+                        else:
+                            rgbw_list.append((0, 0, 0, 0))
+                    else:
+                        rgbw_list.append((0, 0, 0, 0))
+                except (ValueError, IndexError) as e:
+                    self.log(f"⚠️ Invalid color for key {i}: '{color_str}' - using default")
+                    rgbw_list.append((0, 0, 0, 0))
+
+            packet = ble_protocol.set_all_rgb_keys(rgbw_list)
+            asyncio.create_task(self.send_ble(packet))
 
     def delete_current_profile(self):
         if len(self.profiles) <= 1:
@@ -784,7 +862,8 @@ class BLEDeckGUI(QMainWindow):
             self.ping_timeout_count = 0
             
             # Send initial ping and synchronize profiles
-            await self.send_ble("PING")
+            packet = ble_protocol.keep_alive()
+            await self.send_ble(packet)
             await asyncio.sleep(0.5)  # Small delay
             await self.synchronize_profiles_to_device()
             await asyncio.sleep(0.5)  # Small delay between operations
@@ -809,8 +888,15 @@ class BLEDeckGUI(QMainWindow):
         self.ble_client = None
     
     async def disconnect(self): # pyright: ignore[reportIncompatibleMethodOverride]
+        # Prevent multiple simultaneous disconnects
+        if not self.is_connected:
+            return
+
         self.log("🔌 Starting disconnect process...")
-        
+
+        # Mark as disconnected immediately to prevent new operations
+        self.is_connected = False
+
         # Stop timers first
         self.ping_timer.stop()
         
@@ -822,11 +908,12 @@ class BLEDeckGUI(QMainWindow):
                 self.log("🔌 BLE disconnect completed")
             except asyncio.TimeoutError:
                 self.log("⚠️ Disconnect timeout - forcing cleanup")
+            except asyncio.CancelledError:
+                self.log("⚠️ Disconnect cancelled")
             except Exception as e:
-                self.log(f"⚠️ Disconnect error: {e}")
-        
-        self.is_connected = False
-        self.ble_client = None
+                self.log(f"⚠️ Disconnect error (ignored): {e}")
+            finally:
+                self.ble_client = None
         
         # Update UI
         self.status_label.setText("Status: Disconnected")
@@ -839,21 +926,47 @@ class BLEDeckGUI(QMainWindow):
         
         self.log("✅ Disconnected")
     
-    async def send_ble(self, msg):
+    async def send_ble(self, data):
+        """Send binary data to BLE device"""
         if not self.ble_client or not self.is_connected:
             return
-            
+
         try:
+            # Convert to bytes if needed (for backwards compatibility)
+            if isinstance(data, str):
+                data = data.encode()
+
+            # Check if client is still valid before sending
+            if not self.ble_client.is_connected:
+                self.log("⚠️ Cannot send - not connected")
+                return
+
             # Send with timeout but don't disconnect on timeout (could be temporary)
-            await asyncio.wait_for(
-                self.ble_client.write_gatt_char(CHAR_RX_UUID, msg.encode()), 
-                timeout=5.0
-            )
-            self.log(f"→ {msg}")
-            
+            try:
+                await asyncio.wait_for(
+                    self.ble_client.write_gatt_char(CHAR_RX_UUID, data),
+                    timeout=5.0
+                )
+            except asyncio.CancelledError:
+                # Task was cancelled (likely during disconnect) - this is normal
+                self.log("⚠️ Send cancelled")
+                return
+
+            # Log in hex format for binary data (with opcode hint)
+            opcode_hint = ""
+            if len(data) >= 2:
+                op = data[1]
+                op_names = {0x01:"PING", 0x02:"CHG_PROF", 0x03:"SYNC", 0x04:"RGB_KEY", 0x05:"RGB_ALL", 0x06:"LOCK"}
+                opcode_hint = f" [{op_names.get(op, f'0x{op:02X}')}]"
+            self.log(f"→ {data.hex()}{opcode_hint}")
+
         except asyncio.TimeoutError:
-            self.log(f"⚠️ Send timeout: {msg} (keeping connection)")
+            self.log(f"⚠️ Send timeout (keeping connection)")
             # Don't disconnect on timeout - might be temporary
+        except (OSError, BrokenPipeError) as e:
+            # Connection broken errors
+            self.log(f"❌ Connection error: {str(e)}")
+            await self.disconnect()
         except Exception as e:
             # Only disconnect on actual BLE errors (device gone, etc.)
             if "not connected" in str(e).lower() or "device" in str(e).lower():
@@ -863,98 +976,155 @@ class BLEDeckGUI(QMainWindow):
                 self.log(f"⚠️ Send failed: {str(e)} (keeping connection)")
     
     async def synchronize_profiles_to_device(self):
-        """Send all profile names to the device"""
+        """Send all profile names to the device using binary protocol"""
         self.log(f"📁 Synchronizing {len(self.profiles)} profiles to device...")
-        
+
+        # Build profiles dictionary (1-indexed for device)
+        profiles_dict = {}
         for i, profile in enumerate(self.profiles):
             profile_name = profile.get('name', f'Profile {i}')
-            # Format: PROFILE_NAME:index|name
-            msg = f"PROFILE_NAME:{i}|{profile_name}"
-            await self.send_ble(msg)
-            await asyncio.sleep(0.1)  # Small delay between profile sends
-        
+            profiles_dict[i + 1] = profile_name  # Device uses 1-based indexing
+            self.log(f"  Profile {i+1}: '{profile_name}'")
+
+        packet = ble_protocol.sync_profiles(profiles_dict)
+        self.log(f"  Packet size: {len(packet)} bytes")
+        await self.send_ble(packet)
+
         self.log("📁 Profile synchronization complete")
     
     async def send_profile_change(self):
-        msg = f"SET_PROFILE:{self.current_profile_index}"
-        await self.send_ble(msg)
-        self.log(f"📁 Set device profile to: {self.current_profile_index}")
-        # Send back the colors
-        self.send_rgb()
+        """Send complete profile data to device when app changes profiles"""
+        profile = self.profiles[self.current_profile_index]
+        profile_name = profile.get('name', f'Profile {self.current_profile_index}')
+        profile_keys = profile.get("keys", {})
+
+        self.log(f"📁 Sending profile change to device: {self.current_profile_index} - '{profile_name}'")
+
+        # Build list of 16 RGBW tuples in order (0-15)
+        rgbw_list = []
+        for i in range(16):
+            key_data = profile_keys.get(str(i), {})
+            color_str = key_data.get('color', '0,0,0,0')
+
+            try:
+                if color_str:
+                    parts = color_str.strip().split(',')
+                    if len(parts) == 4:
+                        # Parse and validate each value
+                        values = []
+                        for p in parts:
+                            p = p.strip()
+                            if p == '':
+                                values.append(0)
+                            else:
+                                values.append(int(p))
+                        r, g, b, w = values
+
+                        # Clamp to valid ranges
+                        r = max(0, min(255, r))
+                        g = max(0, min(255, g))
+                        b = max(0, min(255, b))
+                        w = max(0, min(100, w))
+
+                        rgbw_list.append((r, g, b, w))
+                    else:
+                        rgbw_list.append((0, 0, 0, 0))
+                else:
+                    rgbw_list.append((0, 0, 0, 0))
+            except (ValueError, IndexError):
+                rgbw_list.append((0, 0, 0, 0))
+
+        # Send CHANGE_PROFILE command with profile index (1-based), name, and colors
+        packet = ble_protocol.change_profile(
+            self.current_profile_index + 1,  # Device uses 1-based indexing
+            profile_name,
+            rgbw_list
+        )
+        await self.send_ble(packet)
     
     def send_ping(self):
         if self.is_connected:
             import time
             self.log(f"🏓 Sending ping (last response: {int(time.time() - self.last_ping_response)}s ago)")
-            asyncio.create_task(self.send_ble("PING"))
+            packet = ble_protocol.keep_alive()
+            asyncio.create_task(self.send_ble(packet))
     
     def auto_connect(self):
         if not self.is_connected:
             asyncio.create_task(self.connect())
     
     async def handle_notification(self, sender, data):
+        """Handle incoming binary protocol packets from device"""
         try:
-            msg = data.decode("utf-8").strip()
-            self.log(f"← {msg}")
-            
+            # Check if we're still connected
+            if not self.is_connected:
+                return
+
             # Any message is a sign of life - update connection health
             import time
             self.last_ping_response = time.time()
             self.ping_timeout_count = 0
-            
-            if msg.startswith("ACK:"):
-                if "PING" in msg:
-                    self.log("🏓 Ping response received")
-            elif msg.startswith("PING"):
-                await self.send_ble("ACK:PING")
-            elif msg.startswith("PROFILE:"):
-                try:
-                    device_profile_index = int(msg.replace("PROFILE:", ""))
-                    self.log(f"📁 Device changed to profile: {device_profile_index}")
-                    
-                    # Update app to match device profile
-                    if 0 <= device_profile_index < len(self.profiles):
-                        # Only update if different from current app profile
-                        if device_profile_index != self.current_profile_index:
-                            self.log(f"📁 Syncing app profile from {self.current_profile_index} → {device_profile_index}")
-                            self.sync_profile_from_device(device_profile_index)
-                    else:
-                        self.log(f"⚠️ Device profile index {device_profile_index} is out of range")
-                except ValueError:
-                    self.log(f"⚠️ Invalid profile message: {msg}")
+
+            # Log raw data (with opcode hint)
+            opcode_hint = ""
+            if len(data) >= 2:
+                op = data[1]
+                op_names = {0x81:"PONG", 0x82:"PROFILE", 0x83:"BUTTON", 0x84:"KEY"}
+                opcode_hint = f" [{op_names.get(op, f'0x{op:02X}')}]"
+            self.log(f"← {data.hex()}{opcode_hint}")
+
+            # Parse binary packet
+            try:
+                opcode, payload = ble_protocol.BLEPacket.parse(data)
+            except ValueError as e:
+                self.log(f"⚠️ Invalid packet: {e}")
+                return
+
+            # Handle different opcodes
+            if opcode == ble_protocol.OP_KEEP_ALIVE_REPLY:
+                self.log("🏓 Ping response received")
+
+            elif opcode == ble_protocol.OP_PROFILE_CHANGED:
+                device_profile_index = ble_protocol.parse_profile_changed(payload)
+                self.log(f"📁 Device changed to profile: {device_profile_index}")
+
+                # Update app to match device profile (device uses 0-based indexing)
+                if 0 <= device_profile_index < len(self.profiles):
+                    # Only update if different from current app profile
+                    if device_profile_index != self.current_profile_index:
+                        self.log(f"📁 Syncing app profile from {self.current_profile_index} → {device_profile_index}")
+                        self.sync_profile_from_device(device_profile_index)
+                else:
+                    self.log(f"⚠️ Device profile index {device_profile_index} is out of range")
+
+            elif opcode == ble_protocol.OP_KEY_PRESSED:
+                profile_index, key_char = ble_protocol.parse_key_pressed(payload)
+                key_char = key_char.upper()
+
+                # Convert key character to key ID (0-15)
+                key_id = self.char_to_key_id(key_char)
+                if key_id is None:
+                    self.log(f"⚠️ Unknown key character: '{key_char}'")
+                    return
+
+                self.log(f"🎹 Key pressed: '{key_char}' (ID: {key_id}) on profile {profile_index}")
+
+                # Light up the key temporarily
+                if key_id in self.key_buttons:
+                    self.key_buttons[key_id].set_active(True)
+                    QTimer.singleShot(200, lambda: self.key_buttons[key_id].set_active(False))
+
+                # Execute the action using the device's profile
+                await self.execute_key_action_for_profile(key_id, profile_index)
+
+            elif opcode == ble_protocol.OP_BUTTON_PRESSED:
+                profile_index, button_name = ble_protocol.parse_button_pressed(payload)
+                self.log(f"🔘 Button pressed: '{button_name}' on profile {profile_index}")
+                # You can add button-specific handling here if needed
+
             else:
-                # Handle key press: format should be "profile_name;key_char"
-                try:
-                    parts = msg.split(';')
-                    if len(parts) == 2:
-                        device_profile_name = parts[0]
-                        key_char = parts[1].upper()  # Ensure uppercase for consistency
-                        
-                        # Convert key character to key ID (0-15)
-                        key_id = self.char_to_key_id(key_char)
-                        if key_id is None:
-                            self.log(f"⚠️ Unknown key character: '{key_char}'")
-                        
-                        self.log(f"🎹 Key pressed: '{key_char}' (ID: {key_id}) on profile '{device_profile_name}'")
-                        
-                        # Find the profile index by name
-                        device_profile_index = None
-                        for i, profile in enumerate(self.profiles):
-                            if profile.get('name', f'Profile {i}') == device_profile_name:
-                                device_profile_index = i
-                                break
-                        
-                        # Light up the key temporarily
-                        if key_id in self.key_buttons:
-                            self.key_buttons[key_id].set_active(True)
-                            QTimer.singleShot(200, lambda: self.key_buttons[key_id].set_active(False))
-                        
-                        # Execute the action using the device's profile, not the app's current profile
-                        await self.execute_key_action_for_profile(key_id, device_profile_index)
-                        
-                except (ValueError, IndexError):
-                    self.log(f"ℹ️ Unhandled message: {msg}")
-        
+                self.log(f"⚠️ Unknown opcode: 0x{opcode:02X}")
+
         except Exception as e:
             self.log(f"❌ Notification error: {str(e)}")
     
@@ -1067,10 +1237,9 @@ class BLEDeckGUI(QMainWindow):
         """
         if self.is_connected:
             user32 = ctypes.windll.User32
-            if (user32.GetForegroundWindow() % 10 == 0):
-                asyncio.create_task(self.send_ble("LOCKED:1"))
-            else:
-                asyncio.create_task(self.send_ble("LOCKED:0"))
+            is_locked = (user32.GetForegroundWindow() % 10 == 0)
+            packet = ble_protocol.lock_device(is_locked)
+            asyncio.create_task(self.send_ble(packet))
 
     def changeEvent(self, event): # pyright: ignore[reportIncompatibleMethodOverride]
         """Intercept minimize event and hide window instead."""
