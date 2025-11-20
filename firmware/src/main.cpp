@@ -39,6 +39,7 @@ unsigned long connectionStartTime = 0;
 
 // Misc
 bool workstationLocked = false;
+unsigned long lastColorShift = 0;
 
 void splitColorsString(String data, char delimiter, int *result, int expectedParts) {
   int start = 0;
@@ -92,22 +93,22 @@ void oledUpdateLockedStatus() {
 NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> rgb_keys(RGB_NUM, RGB_PIN);
 
 const std::vector<String> defaultRgbColors = {
-  "128,0,0,25",
-  "230,25,75,47",
-  "245,130,48,70",
-  "170,110,40,50",
-  "210,245,60,87",
-  "60,180,75,69",
-  "0,128,128,50",
-  "0,130,200,47",
-  "0,0,128,6",
-  "145,30,180,38",
-  "240,50,230,58",
-  "230,190,255,85",
-  "250,190,190,83",
-  "255,250,200,96",
-  "128,128,128,50",
-  "70,240,240,88"
+  "255,0,0,80",
+  "255,96,0,80",
+  "255,191,0,80",
+  "255,255,0,80",
+  "191,255,0,80",
+  "96,255,0,80",
+  "0,255,0,80",
+  "0,255,96,80",
+  "0,255,191,80",
+  "0,191,255,80",
+  "0,96,255,80",
+  "0,0,255,80",
+  "96,0,255,80",
+  "191,0,255,80",
+  "255,0,191,80",
+  "255,0,96,80"
 };
 
 std::vector<String> rgbColors = defaultRgbColors;
@@ -129,6 +130,16 @@ void rgbUpdateColors(const std::vector<String>& colorArray, int idx = 99) {
     rgb_keys.SetPixelColor(idx, color.Dim(map(values[3], 0, 100, 0, 255)));
   }
   rgb_keys.Show(); 
+}
+
+void rotateColors(std::vector<String>& colors) {
+  if (colors.size() < 2) return;
+
+  String first = colors[0];
+  for (size_t i = 1; i < colors.size(); i++) {
+    colors[i - 1] = colors[i];
+  }
+  colors.back() = first;
 }
 
 // BLE Send Helpers
@@ -616,10 +627,6 @@ void setup() {
 
 void loop() {
 
-  btn_encoder_con.update();
-  btn_encoder_back.update();
-  btn_encoder_push.update();
-
   // Handle connection state changes
   if (!deviceConnected && oldDeviceConnected) {
     delay(500); // Give the bluetooth stack time to clean up
@@ -640,45 +647,62 @@ void loop() {
     pServer->disconnect(pServer->getConnId());
   }
 
-  if (btn_encoder_con.pressed()){
-    Serial.println("CON PRESSED");
-    sendButtonPressed("CON");
-  }
-
-  if (btn_encoder_back.pressed()){
-    Serial.println("BACK PRESSED");
-    sendButtonPressed("BACK");
-  }
-
-  if (btn_encoder_push.pressed()){
-    Serial.println("PUSH PRESSED");
-    sendButtonPressed("PUSH");
-  }
-
-  char key = keypad->getKey();
-  if (key && !workstationLocked) {
-    Serial.println(key);
-    sendKeyPressed(key);
-  }
-
-  if (turnedRightFlag) {
-	  turnedRightFlag = false;
-    Serial.println( "Right ->" );
-    currentProfile++;
-    if (currentProfile >= profileCount) {
-      currentProfile = 0;  // Wrap to first profile
-    }
-    handleProfileChange();
-  } else if( turnedLeftFlag ) {
-	  turnedLeftFlag = false;
-    Serial.println( "<- Left" );
-    currentProfile--;
-    if (currentProfile < 0) {
-      currentProfile = profileCount - 1;  // Wrap to last profile
-    }
-    handleProfileChange();
-  }
+  if (deviceConnected) {
   
+    // Update buttons
+    btn_encoder_con.update();
+    btn_encoder_back.update();
+    btn_encoder_push.update();
+    
+    if (btn_encoder_con.pressed()){
+      Serial.println("CON PRESSED");
+      sendButtonPressed("CON");
+    }
+  
+    if (btn_encoder_back.pressed()){
+      Serial.println("BACK PRESSED");
+      sendButtonPressed("BACK");
+    }
+  
+    if (btn_encoder_push.pressed()){
+      Serial.println("PUSH PRESSED");
+      sendButtonPressed("PUSH");
+    }
+  
+    // Read keypad input
+    char key = keypad->getKey();
+    if (key && !workstationLocked) {
+      Serial.println(key);
+      sendKeyPressed(key);
+    }
+  
+    // Perform encoder action
+    if (turnedRightFlag) {
+	    turnedRightFlag = false;
+      Serial.println( "Right ->" );
+      currentProfile++;
+      if (currentProfile >= profileCount) {
+        currentProfile = 0;  // Wrap to first profile
+      }
+      handleProfileChange();
+    } else if( turnedLeftFlag ) {
+	    turnedLeftFlag = false;
+      Serial.println( "<- Left" );
+      currentProfile--;
+      if (currentProfile < 0) {
+        currentProfile = profileCount - 1;  // Wrap to last profile
+      }
+      handleProfileChange();
+    }
+  } else {
+    // Play idle RGB animation when not connected
+    if (millis() - lastColorShift >= 200) {   // 200 ms passed
+      lastColorShift = millis();
+      rotateColors(rgbColors);
+      rgbUpdateColors(rgbColors);
+    }
+  }
+
   // Small delay to prevent overwhelming the BLE stack
   delay(10);
 }

@@ -191,7 +191,7 @@ class BLEDeckGUI(QMainWindow):
         # Setup timer to detect locked workstation
         self.device_lock_timer = QTimer()
         self.device_lock_timer.timeout.connect(self.screen_locked)
-        #self.device_lock_timer.start(5000)
+        self.device_lock_timer.start(2500)
 
         # Auto-connect timer - start disabled, can be enabled via UI
         self.connect_timer = QTimer()
