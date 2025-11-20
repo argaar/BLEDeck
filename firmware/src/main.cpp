@@ -1,25 +1,27 @@
 #include "configuration.h"
+#include "protocolparser.h"
+#include <images.h>
+
 #include <Keypad.h>
+
 #include <ESP32RotaryEncoder.h>
 #include <Bounce2.h>
+
 #include <Wire.h>
 #include "SSD1306Wire.h"
 #include "OLEDDisplay.h"
-#include <Preferences.h>
+
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
-#include <images.h>
+
 #include <NeoPixelBus.h>
+
 #include <vector>
-#include "protocolparser.h"
 
 // Protocol Parser
 ProtocolParser parser;
-
-// Prefs
-Preferences prefs;
 
 // Profiles - can be updated from Windows app
 int currentProfile = 0;
@@ -37,24 +39,6 @@ unsigned long connectionStartTime = 0;
 
 // Misc
 bool workstationLocked = false;
-
-void splitStringToVector(const String &input, char delimiter, std::vector<String> &output) {
-  output.clear();  // Make sure the vector is empty before populating
-  int start = 0;
-  int end = 0;
-
-  while (true) {
-    end = input.indexOf(delimiter, start);
-    if (end == -1) {
-      // Last element
-      output.push_back(input.substring(start));
-      break;
-    } else {
-      output.push_back(input.substring(start, end));
-      start = end + 1;
-    }
-  }
-}
 
 void splitColorsString(String data, char delimiter, int *result, int expectedParts) {
   int start = 0;
@@ -107,7 +91,6 @@ void oledUpdateLockedStatus() {
 // RGB
 NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> rgb_keys(RGB_NUM, RGB_PIN);
 
-// Default RGB colors
 const std::vector<String> defaultRgbColors = {
   "128,0,0,25",
   "230,25,75,47",
@@ -224,22 +207,7 @@ void sendKeyPressed(char key) {
   sendBinaryPacket(OP_KEY_PRESSED, payload, 2);
 }
 
-// BLE Functions
-void applyProfileFromPC(int idx) {
-  if (idx < 0 || idx >= profileCount) {
-    Serial.printf("Invalid profile index: %d (max: %d)\n", idx, profileCount - 1);
-    return;
-  }
-  currentProfile = idx;
-  prefs.begin("bledeck", false);
-  prefs.putInt("currentprofile", currentProfile);
-  prefs.end();
-  oledUpdate(currentProfile);
-  Serial.printf("Applied CHANGE_PROFILE from PC -> %d (%s)\n", idx, profileNames[idx].c_str());
-  sendProfileChanged(idx);
-}
-
-// Handle incoming binary protocol packets
+// Handlers
 void handlePacket(const ParsedPacket &pkt) {
   Serial.printf("RX <- Opcode: 0x%02X, Length: %d\n", pkt.opcode, pkt.length);
 
@@ -247,13 +215,14 @@ void handlePacket(const ParsedPacket &pkt) {
   lastPingTime = millis();
 
   switch (pkt.opcode) {
-    case OP_KEEP_ALIVE:
+    case OP_KEEP_ALIVE: {
       // Keep alive ping - send reply
       sendKeepAliveReply();
       break;
-
+    }
+    
     case OP_CHANGE_PROFILE: {
-      // Payload: profile_index(1B) + name_length(1B) + name + 16xRGBW(64B)
+      // Payload: profile_index(1B) + name_length(1B) + name
       if (pkt.length < 2) {
         Serial.println("Error: CHANGE_PROFILE packet too short");
         break;
@@ -262,7 +231,7 @@ void handlePacket(const ParsedPacket &pkt) {
       uint8_t profileIndex = pkt.payload[0];
       uint8_t nameLength = pkt.payload[1];
 
-      if (pkt.length < 2 + nameLength + 64) {
+      if (pkt.length < 2 + nameLength) {
         Serial.println("Error: CHANGE_PROFILE packet incomplete");
         break;
       }
@@ -282,24 +251,16 @@ void handlePacket(const ParsedPacket &pkt) {
         if (idx >= profileCount) {
           profileCount = idx + 1;
         }
-
         Serial.printf("Stored profile %d: '%s'\n", profileIndex, profileName.c_str());
 
-        // Extract RGBW colors for 16 keys
-        int colorOffset = 2 + nameLength;
-        for (int i = 0; i < 16 && i < rgbColors.size(); i++) {
-          uint8_t r = pkt.payload[colorOffset + i * 4];
-          uint8_t g = pkt.payload[colorOffset + i * 4 + 1];
-          uint8_t b = pkt.payload[colorOffset + i * 4 + 2];
-          uint8_t w = pkt.payload[colorOffset + i * 4 + 3];
-
-          // Store as string in format "R,G,B,W"
-          rgbColors[i] = String(r) + "," + String(g) + "," + String(b) + "," + String(w);
-        }
-
         // Apply the profile if it's being set as current
-        applyProfileFromPC(idx);
-        rgbUpdateColors(rgbColors);
+        if (idx < 0 || idx >= profileCount) {
+          Serial.printf("Invalid profile index: %d (max: %d)\n", idx, profileCount - 1);
+          return;
+        }
+        currentProfile = idx;
+        oledUpdate(currentProfile);
+        Serial.printf("Applied CHANGE_PROFILE from PC -> %d (%s)\n", idx, profileNames[idx].c_str());
       } else {
         Serial.printf("Error: Invalid profile index %d\n", profileIndex);
       }
@@ -349,13 +310,12 @@ void handlePacket(const ParsedPacket &pkt) {
     }
 
     case OP_SET_RGB_KEY: {
-      // Payload: profile_index(1B) + key_index(1B) + R(1B) + G(1B) + B(1B) + W(1B)
-      if (pkt.length != 6) {
+      // Payload: key_index(1B) + R(1B) + G(1B) + B(1B) + W(1B)
+      if (pkt.length != 5) {
         Serial.println("Error: SET_RGB_KEY invalid length");
         break;
       }
 
-      uint8_t profileIndex = pkt.payload[0];
       uint8_t keyIndex = pkt.payload[1];
       uint8_t r = pkt.payload[2];
       uint8_t g = pkt.payload[3];
@@ -432,6 +392,19 @@ void handlePacket(const ParsedPacket &pkt) {
     default:
       Serial.printf("Unknown opcode: 0x%02X\n", pkt.opcode);
       break;
+  }
+}
+
+void handleProfileChange() {
+  Serial.printf("Profile changed to: %d (%s)\n", currentProfile, profileNames[currentProfile].c_str());
+  oledUpdate(currentProfile);
+
+  // Send profile change notification if connected
+  if (deviceConnected) {
+    Serial.printf("Sending profile change notification: %d\n", currentProfile);
+    sendProfileChanged(currentProfile);
+  } else {
+    Serial.println("Device not connected - skipping profile notification");
   }
 }
 
@@ -604,7 +577,7 @@ void setup() {
   
   // Set BLE power to maximum for better range
   esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
-  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_SCAN, ESP_PWR_LVL_P9);
+  //esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_SCAN, ESP_PWR_LVL_P9);
   
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new ServerCallbacks());
@@ -632,9 +605,6 @@ void setup() {
   pServer->getAdvertising()->start();
   
   // Profiles
-  prefs.begin("bledeck", true);
-  currentProfile = prefs.getInt("currentprofile", 0);
-  prefs.end();
   oledUpdate(currentProfile);
 
   // RGB
@@ -698,17 +668,7 @@ void loop() {
     if (currentProfile >= profileCount) {
       currentProfile = 0;  // Wrap to first profile
     }
-
-    Serial.printf("Profile changed to: %d (%s)\n", currentProfile, profileNames[currentProfile].c_str());
-    oledUpdate(currentProfile);
-
-    // Send profile change notification if connected
-    if (deviceConnected) {
-      Serial.printf("Sending profile change notification: %d\n", currentProfile);
-      sendProfileChanged(currentProfile);
-    } else {
-      Serial.println("Device not connected - skipping profile notification");
-    }
+    handleProfileChange();
   } else if( turnedLeftFlag ) {
 	  turnedLeftFlag = false;
     Serial.println( "<- Left" );
@@ -716,17 +676,7 @@ void loop() {
     if (currentProfile < 0) {
       currentProfile = profileCount - 1;  // Wrap to last profile
     }
-
-    Serial.printf("Profile changed to: %d (%s)\n", currentProfile, profileNames[currentProfile].c_str());
-    oledUpdate(currentProfile);
-
-    // Send profile change notification if connected
-    if (deviceConnected) {
-      Serial.printf("Sending profile change notification: %d\n", currentProfile);
-      sendProfileChanged(currentProfile);
-    } else {
-      Serial.println("Device not connected - skipping profile notification");
-    }
+    handleProfileChange();
   }
   
   // Small delay to prevent overwhelming the BLE stack

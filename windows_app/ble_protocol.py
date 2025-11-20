@@ -44,17 +44,13 @@ def lock_device(lock: bool):
     payload = struct.pack("B", 1 if lock else 0)
     return BLEPacket.build(OP_LOCK_DEVICE, payload)
 
-def change_profile(index, name, key_rgbw_list):
+def change_profile(index, name):
     # index: 1B
     # name: len + bytes
     # keys: 16 * 4 bytes RGBW
     name_bytes = name.encode("utf-8")
     payload = struct.pack("BB", index, len(name_bytes))
     payload += name_bytes
-
-    for (r, g, b, w) in key_rgbw_list:
-        payload += struct.pack("BBBB", r, g, b, w)
-
     return BLEPacket.build(OP_CHANGE_PROFILE, payload)
 
 def sync_profiles(profiles_dict):
@@ -66,8 +62,8 @@ def sync_profiles(profiles_dict):
         payload += name_bytes
     return BLEPacket.build(OP_SYNC_PROFILES, payload)
 
-def set_rgb_key(profile_idx, key_idx, r, g, b, w):
-    payload = struct.pack("BBBBBB", profile_idx, key_idx, r, g, b, w)
+def set_rgb_key(key_idx, r, g, b, w):
+    payload = struct.pack("BBBBB", key_idx, r, g, b, w)
     return BLEPacket.build(OP_SET_RGB_KEY, payload)
 
 def set_all_rgb_keys(rgbw_list):

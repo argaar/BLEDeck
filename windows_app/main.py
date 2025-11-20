@@ -667,40 +667,38 @@ class BLEDeckGUI(QMainWindow):
         # Send back the colors
         self.send_rgb()
     
+    def parse_color_string(self, color_str):
+        """Parse color string 'R,G,B,W' into tuple (r, g, b, w)"""
+        try:
+            parts = color_str.strip().split(',')
+            if len(parts) == 4:
+                values = []
+                for p in parts:
+                    p = p.strip()
+                    if p == '':
+                        values.append(0)
+                    else:
+                        values.append(int(p))
+                r, g, b, w = values
+                # Clamp values
+                r = max(0, min(255, r))
+                g = max(0, min(255, g))
+                b = max(0, min(255, b))
+                w = max(0, min(100, w))
+                return (r, g, b, w)
+        except (ValueError, AttributeError) as e:
+            self.log(f"⚠️ Error parsing color '{color_str}': {e}")
+        return (0, 0, 0, 0)
+
     def send_rgb(self, color=None):
         """Send RGB color(s) to device using binary protocol"""
         if color:
-            # Send single key color
-            try:
-                parts = color.strip().split(',')
-                if len(parts) == 4:
-                    # Parse and validate each value
-                    values = []
-                    for p in parts:
-                        p = p.strip()
-                        if p == '':
-                            values.append(0)
-                        else:
-                            values.append(int(p))
-                    r, g, b, w = values
-
-                    # Clamp to valid ranges
-                    r = max(0, min(255, r))
-                    g = max(0, min(255, g))
-                    b = max(0, min(255, b))
-                    w = max(0, min(100, w))
-
-                    packet = ble_protocol.set_rgb_key(
-                        self.current_profile_index,
+            r, g, b, w = self.parse_color_string(color)
+            packet = ble_protocol.set_rgb_key(
                         self.selected_key_id,
                         r, g, b, w
                     )
-                    asyncio.create_task(self.send_ble(packet))
-                else:
-                    self.log(f"⚠️ Invalid color format (expected R,G,B,W): {color}")
-            except (ValueError, IndexError) as e:
-                self.log(f"⚠️ Error parsing color '{color}': {e}")
-                return
+            asyncio.create_task(self.send_ble(packet))
         else:
             # Send all 16 key colors
             rgbw_list = []
@@ -710,35 +708,7 @@ class BLEDeckGUI(QMainWindow):
             for i in range(16):
                 key_data = profile_keys.get(str(i), {})
                 color_str = key_data.get('color', '0,0,0,0')
-
-                try:
-                    if color_str:
-                        parts = color_str.strip().split(',')
-                        if len(parts) == 4:
-                            # Parse and validate each value
-                            values = []
-                            for p in parts:
-                                p = p.strip()
-                                if p == '':
-                                    values.append(0)
-                                else:
-                                    values.append(int(p))
-                            r, g, b, w = values
-
-                            # Clamp to valid ranges
-                            r = max(0, min(255, r))
-                            g = max(0, min(255, g))
-                            b = max(0, min(255, b))
-                            w = max(0, min(100, w))
-
-                            rgbw_list.append((r, g, b, w))
-                        else:
-                            rgbw_list.append((0, 0, 0, 0))
-                    else:
-                        rgbw_list.append((0, 0, 0, 0))
-                except (ValueError, IndexError) as e:
-                    self.log(f"⚠️ Invalid color for key {i}: '{color_str}' - using default")
-                    rgbw_list.append((0, 0, 0, 0))
+                rgbw_list.append(self.parse_color_string(color_str))
 
             packet = ble_protocol.set_all_rgb_keys(rgbw_list)
             asyncio.create_task(self.send_ble(packet))
@@ -1005,43 +975,20 @@ class BLEDeckGUI(QMainWindow):
         for i in range(16):
             key_data = profile_keys.get(str(i), {})
             color_str = key_data.get('color', '0,0,0,0')
+            rgbw_list.append(self.parse_color_string(color_str))
 
-            try:
-                if color_str:
-                    parts = color_str.strip().split(',')
-                    if len(parts) == 4:
-                        # Parse and validate each value
-                        values = []
-                        for p in parts:
-                            p = p.strip()
-                            if p == '':
-                                values.append(0)
-                            else:
-                                values.append(int(p))
-                        r, g, b, w = values
-
-                        # Clamp to valid ranges
-                        r = max(0, min(255, r))
-                        g = max(0, min(255, g))
-                        b = max(0, min(255, b))
-                        w = max(0, min(100, w))
-
-                        rgbw_list.append((r, g, b, w))
-                    else:
-                        rgbw_list.append((0, 0, 0, 0))
-                else:
-                    rgbw_list.append((0, 0, 0, 0))
-            except (ValueError, IndexError):
-                rgbw_list.append((0, 0, 0, 0))
-
-        # Send CHANGE_PROFILE command with profile index (1-based), name, and colors
-        packet = ble_protocol.change_profile(
+        # Send CHANGE_PROFILE command with profile index (1-based) and name
+        profile_packet = ble_protocol.change_profile(
             self.current_profile_index + 1,  # Device uses 1-based indexing
-            profile_name,
+            profile_name
+        )
+        await self.send_ble(profile_packet)
+
+        rgb_packet = ble_protocol.set_all_rgb_keys(
             rgbw_list
         )
-        await self.send_ble(packet)
-    
+        await self.send_ble(rgb_packet)
+
     def send_ping(self):
         if self.is_connected:
             import time
@@ -1127,10 +1074,6 @@ class BLEDeckGUI(QMainWindow):
 
         except Exception as e:
             self.log(f"❌ Notification error: {str(e)}")
-    
-    async def execute_key_action(self, key_id):
-        """Execute action for current app profile"""
-        await self.execute_key_action_for_profile(key_id, self.current_profile_index)
     
     async def execute_key_action_for_profile(self, key_id, profile_index):
         """Execute action for a specific profile"""

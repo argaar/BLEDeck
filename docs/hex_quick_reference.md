@@ -53,19 +53,18 @@ aa 82 00 01 02
 
 ### Example 3: Set RGB Key
 ```
-aa 04 00 06 00 05 ff 00 00 32
-│  │  │  │  │  │  │  │  │  └─ W: 50 (0x32 = 50 brightness)
-│  │  │  │  │  │  │  │  └─ B: 0
-│  │  │  │  │  │  │  └─ G: 0
-│  │  │  │  │  │  └─ R: 255 (0xFF = 255)
-│  │  │  │  │  └─ Key index: 5
-│  │  │  │  └─ Profile index: 0
+aa 04 00 06 05 ff 00 00 32
+│  │  │  │  │  │  │  │  └─ W: 50 (0x32 = 50 brightness)
+│  │  │  │  │  │  │  └─ B: 0
+│  │  │  │  │  │  └─ G: 0
+│  │  │  │  │  └─ R: 255 (0xFF = 255)
+│  │  │  │  └─ Key index: 5
 │  │  │  └─ Length low: 06 (6 bytes)
 │  │  └─ Length high: 00
 │  └─ Opcode: 04 (Set RGB Key)
 └─ Start: AA ✓
 ```
-**Meaning**: Set key 5 on profile 0 to red (255,0,0) at 50% brightness.
+**Meaning**: Set key 5 to red (255,0,0) at 50% brightness.
 
 ### Example 4: Sync Profiles
 ```

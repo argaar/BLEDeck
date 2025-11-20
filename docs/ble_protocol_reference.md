@@ -136,14 +136,12 @@ Sets the RGBW value for a single key.
 ### Payload Structure
 ```
 +--------------------+
-| profile_index 1B   |
 | key_index     1B   |
 | R 1B | G 1B | B 1B |
 | W 1B                |
 +--------------------+
 ```
 
-- `profile_index` — which profile to modify
 - `key_index` — which key (0–15)
 - `R,G,B,W` — color values (0–255)
 

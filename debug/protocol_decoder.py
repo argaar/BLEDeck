@@ -177,8 +177,7 @@ def decode_payload(opcode, payload):
             print("    ❌ Payload too short (expected 6 bytes)")
             return
 
-        profile_idx, key_idx, r, g, b, w = struct.unpack("BBBBBB", payload[:6])
-        print(f"    Profile Index: {profile_idx}")
+        key_idx, r, g, b, w = struct.unpack("BBBBB", payload[:5])
         print(f"    Key Index: {key_idx}")
         print(f"    Color: R={r}, G={g}, B={b}, W={w} (brightness)")
         print(f"    Preview: rgb({r},{g},{b}) at {w}% brightness")
