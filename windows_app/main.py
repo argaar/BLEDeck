@@ -931,7 +931,7 @@ class BLEDeckGUI(QMainWindow):
             self.log(f"→ {data.hex()}{opcode_hint}")
 
         except asyncio.TimeoutError:
-            self.log(f"⚠️ Send timeout (keeping connection)")
+            self.log("⚠️ Send timeout (keeping connection)")
             # Don't disconnect on timeout - might be temporary
         except (OSError, BrokenPipeError) as e:
             # Connection broken errors
@@ -1178,11 +1178,21 @@ class BLEDeckGUI(QMainWindow):
         """
         Find if the user has locked their screen.
         """
-        if self.is_connected:
-            user32 = ctypes.windll.User32
-            is_locked = (user32.GetForegroundWindow() % 10 == 0)
-            packet = ble_protocol.lock_device(is_locked)
-            asyncio.create_task(self.send_ble(packet))
+        #if self.is_connected:
+        #    user32 = ctypes.windll.User32
+        #    # Detect if the workstation is locked (Windows)
+        #    try:
+        #        # If the foreground window is the desktop window, assume locked
+        #        fg_window = user32.GetForegroundWindow()
+        #        desktop_window = user32.GetDesktopWindow()
+        #        is_locked = fg_window == desktop_window
+        #    except Exception as e:
+        #        self.log(f"Screen lock detection error: {e}")
+        #        is_locked = False
+        #    self.log(f"🔒 Screen locked: {is_locked}")
+        #    packet = ble_protocol.lock_device(is_locked)
+        #    asyncio.create_task(self.send_ble(packet))
+        pass # Currently disabled since unreliable
 
     def changeEvent(self, event): # pyright: ignore[reportIncompatibleMethodOverride]
         """Intercept minimize event and hide window instead."""

@@ -103,8 +103,10 @@ def parse_sync_profiles(payload):
     profiles = {}
     offset = 1
     for _ in range(count):
-        idx = payload[offset]; offset += 1
-        name_len = payload[offset]; offset += 1
+        idx = payload[offset]
+        offset += 1
+        name_len = payload[offset]
+        offset += 1
         name = payload[offset:offset+name_len].decode("utf-8")
         offset += name_len
         profiles[idx] = name
