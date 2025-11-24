@@ -113,11 +113,18 @@ def parse_sync_profiles(payload):
     return profiles
 
 def parse_set_rgb_key(payload):
-    profile_idx, key_idx, r, g, b, w = struct.unpack("BBBBBB", payload)
-    return profile_idx, key_idx, (r, g, b, w)
+    """
+    Parse rgb color for a specific key
+    Returns key with color
+    """
+    key_idx, r, g, b, w = struct.unpack("BBBBB", payload)
+    return key_idx, (r, g, b, w)
 
 def parse_profile_changed(payload):
-    """Parse profile changed event - returns profile index"""
+    """
+    Parse profile changed event
+    Returns: profile index
+    """
     return payload[0]
 
 def parse_button_pressed(payload):

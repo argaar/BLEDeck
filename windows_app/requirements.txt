@@ -1,4 +1,4 @@
-bleak==0.22.2
-asyncio
-PyQt5==5.15.10
-qasync==0.24.2
+bleak==2.0.0
+PyQt5==5.15.11
+qasync==0.28.0
+pynput==1.8.1

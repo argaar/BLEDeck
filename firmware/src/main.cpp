@@ -327,11 +327,11 @@ void handlePacket(const ParsedPacket &pkt) {
         break;
       }
 
-      uint8_t keyIndex = pkt.payload[1];
-      uint8_t r = pkt.payload[2];
-      uint8_t g = pkt.payload[3];
-      uint8_t b = pkt.payload[4];
-      uint8_t w = pkt.payload[5];
+      uint8_t keyIndex = pkt.payload[0];
+      uint8_t r = pkt.payload[1];
+      uint8_t g = pkt.payload[2];
+      uint8_t b = pkt.payload[3];
+      uint8_t w = pkt.payload[4];
 
       // Validate indices
       if (keyIndex >= 16 || keyIndex >= rgbColors.size()) {

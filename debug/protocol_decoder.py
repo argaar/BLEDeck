@@ -141,7 +141,7 @@ def decode_payload(opcode, payload):
                 r, g, b, w = colors_data[idx:idx+4]
                 print(f"      Key {i:2d}: R={r:3d}, G={g:3d}, B={b:3d}, W={w:3d}")
         else:
-            print(f"    ⚠️  Insufficient color data")
+            print("    ⚠️  Insufficient color data")
 
     elif opcode == OP_SYNC_PROFILES:
         print("  ➤ Sync Profiles")
@@ -173,8 +173,8 @@ def decode_payload(opcode, payload):
 
     elif opcode == OP_SET_RGB_KEY:
         print("  ➤ Set Single RGB Key")
-        if len(payload) < 6:
-            print("    ❌ Payload too short (expected 6 bytes)")
+        if len(payload) < 5:
+            print("    ❌ Payload too short (expected 5 bytes)")
             return
 
         key_idx, r, g, b, w = struct.unpack("BBBBB", payload[:5])

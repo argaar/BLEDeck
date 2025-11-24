@@ -13,6 +13,7 @@ from PyQt5.QtGui import QColor, QIcon
 from ble_client import BleakClient, DEVICE_NAME, CHAR_TX_UUID, CHAR_RX_UUID
 from profile_manager import load_profiles, save_profiles
 import ble_protocol
+import pynput
 
 class KeyButton(QPushButton):
     def __init__(self, key_id, text):
@@ -698,7 +699,6 @@ class BLEDeckGUI(QMainWindow):
                         self.selected_key_id,
                         r, g, b, w
                     )
-            asyncio.create_task(self.send_ble(packet))
         else:
             # Send all 16 key colors
             rgbw_list = []
@@ -709,9 +709,8 @@ class BLEDeckGUI(QMainWindow):
                 key_data = profile_keys.get(str(i), {})
                 color_str = key_data.get('color', '0,0,0,0')
                 rgbw_list.append(self.parse_color_string(color_str))
-
             packet = ble_protocol.set_all_rgb_keys(rgbw_list)
-            asyncio.create_task(self.send_ble(packet))
+        asyncio.create_task(self.send_ble(packet))
 
     def delete_current_profile(self):
         if len(self.profiles) <= 1:
