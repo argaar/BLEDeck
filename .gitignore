@@ -9,6 +9,7 @@ firmware/env
 firmware/.gitignore
 
 pcb/bledeck/bledeck-backups
+pcb/bledeck/fp-info-cache
 pcb/bledeck/jlcpcb/gerber
 pcb/bledeck/jlcpcb/project.db
 

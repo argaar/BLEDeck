@@ -18,6 +18,8 @@
 
 #include <NeoPixelBus.h>
 
+#include "CircularBuffer.hpp"
+
 #include <vector>
 
 // Protocol Parser
@@ -542,6 +544,39 @@ byte rowPins[4] = {ROW_PIN_1, ROW_PIN_2, ROW_PIN_3, ROW_PIN_4};
 byte colPins[4] = {COL_PIN_1, COL_PIN_2, COL_PIN_3, COL_PIN_4};
 Keypad* keypad;
 
+// BATTERY
+static uint32_t last_read_bat = 0;
+CircularBuffer<float, BAT_NUM_READ> bat_readings;
+
+void battery_loop(){
+    if (0 == last_read_bat || millis() - last_read_bat > BAT_INTERVAL_S) {
+
+        uint16_t v = analogRead(BAT_PIN);
+        if (v!=0) {
+            int vref = 1100;
+            float bat_voltage = v * (vref / 4095.0);
+            bat_readings.push(bat_voltage);
+            float bat_values = 0.0;
+            for (int i = 0; i < bat_readings.size(); ++i) {
+                bat_values = bat_values + bat_readings[i];
+            }
+
+            float avg_bat_voltage = (bat_values / bat_readings.size()) * ( (BAT_R1 + BAT_R2) / BAT_R2 ) / 1000;
+            float percent = (avg_bat_voltage - BAT_MIN_V) * 100.0 / (BAT_MAX_V - BAT_MIN_V);
+            
+            // Clamp between 0% and 100%
+            if (percent < 0) percent = 0;
+            if (percent > 100) percent = 100;
+            char batmgmt[24] = "" ;
+            sprintf (batmgmt, "Bat: %.1fV - %.0f%%", avg_bat_voltage, percent);
+            Serial.println(batmgmt);
+        } else {
+            Serial.println("No battery!");
+        }
+        last_read_bat = millis();
+    }
+}
+
 void setup() {
   // Misc
   Serial.begin(115200);
@@ -620,6 +655,9 @@ void setup() {
 
   // RGB
   rgbUpdateColors(rgbColors);
+
+  // Battery
+  analogSetAttenuation(ADC_0db); // 0-1.1V range
 
   Serial.println("Firmware ready - Advertising started");
   lastPingTime = millis();
@@ -702,6 +740,9 @@ void loop() {
       rgbUpdateColors(rgbColors);
     }
   }
+
+  // Update adc reading
+  battery_loop();
 
   // Small delay to prevent overwhelming the BLE stack
   delay(10);
