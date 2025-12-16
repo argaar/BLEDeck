@@ -160,7 +160,7 @@
 		(layers "*.Cu" "*.Mask")
 		(uuid "4e32e61f-b93f-4685-8dbd-ee12ddb86619")
 	)
-	(pad "1" thru_hole rect
+	(pad "1" thru_hole oval
 		(at 21 15.6)
 		(size 2 2)
 		(drill 1.02)
@@ -224,7 +224,7 @@
 		(remove_unused_layers no)
 		(uuid "af2eb1c9-01af-436a-9288-725581dc907e")
 	)
-	(pad "9" thru_hole oval
+	(pad "9" thru_hole rect
 		(at 0.68 15.6)
 		(size 2 2)
 		(drill 1.02)

@@ -21,10 +21,10 @@
 #define ROW_PIN_2               GPIO_NUM_33
 #define ROW_PIN_3               GPIO_NUM_25
 #define ROW_PIN_4               GPIO_NUM_26
-#define COL_PIN_1               GPIO_NUM_23
-#define COL_PIN_2               GPIO_NUM_19
-#define COL_PIN_3               GPIO_NUM_18
-#define COL_PIN_4               GPIO_NUM_5
+#define COL_PIN_1               GPIO_NUM_5
+#define COL_PIN_2               GPIO_NUM_18
+#define COL_PIN_3               GPIO_NUM_19
+#define COL_PIN_4               GPIO_NUM_23
 
 // RGB
 #define RGB_PIN                 GPIO_NUM_14

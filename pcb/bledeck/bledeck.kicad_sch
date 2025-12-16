@@ -6,8 +6,8 @@
 	(paper "A4")
 	(title_block
 		(title "BLEDeck")
-		(date "2025-11-11")
-		(rev "1.0")
+		(date "2025-12-16")
+		(rev "1.1")
 		(company "Davide \"Argaar\" Foschi")
 	)
 	(lib_symbols
@@ -2001,6 +2001,12 @@
 		(uuid "0ed6b0f9-dfba-4c2b-aed8-473320d92e79")
 	)
 	(junction
+		(at 157.48 110.49)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "13cd645e-156b-44a8-bfc5-527e53ca875e")
+	)
+	(junction
 		(at 40.64 45.72)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2079,6 +2085,12 @@
 		(uuid "472592ac-da8c-4902-b59f-137b69e878c9")
 	)
 	(junction
+		(at 157.48 85.09)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "497a5242-f689-437d-9d99-2bbe65e130aa")
+	)
+	(junction
 		(at 242.57 59.69)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2109,6 +2121,12 @@
 		(uuid "5f1bc7e4-2c9f-4f24-a759-53a2b10e56fd")
 	)
 	(junction
+		(at 191.77 110.49)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "673b14a5-26a6-4f4d-ac9f-027fbb9412fb")
+	)
+	(junction
 		(at 240.03 107.95)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2137,6 +2155,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "8432844e-efbf-4f5c-a8c5-31b385549417")
+	)
+	(junction
+		(at 157.48 96.52)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "84d6ca95-a0eb-499c-b59d-f27a719d0e91")
 	)
 	(junction
 		(at 76.2 132.08)
@@ -2211,6 +2235,12 @@
 		(uuid "b7ff1792-c610-4fac-9f0a-ece50f68b35f")
 	)
 	(junction
+		(at 189.23 134.62)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "bdeb3a65-d600-4c9f-80f0-e18674155a80")
+	)
+	(junction
 		(at 214.63 82.55)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2233,6 +2263,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "cd2749f1-9526-4072-a08d-ee3a8b6e50b5")
+	)
+	(junction
+		(at 191.77 85.09)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "d174c1ba-3b24-4372-8d90-558799e76632")
 	)
 	(junction
 		(at 214.63 107.95)
@@ -2738,6 +2774,16 @@
 	)
 	(wire
 		(pts
+			(xy 157.48 110.49) (xy 157.48 134.62)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "38324521-cf5b-4f6d-a757-aae60c7a4ba9")
+	)
+	(wire
+		(pts
 			(xy 123.19 160.02) (xy 120.65 160.02)
 		)
 		(stroke
@@ -2908,6 +2954,16 @@
 	)
 	(wire
 		(pts
+			(xy 157.48 96.52) (xy 157.48 110.49)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "50edbff3-2153-48d9-9d42-48c8f202def7")
+	)
+	(wire
+		(pts
 			(xy 39.37 40.64) (xy 39.37 53.34)
 		)
 		(stroke
@@ -3048,7 +3104,7 @@
 	)
 	(wire
 		(pts
-			(xy 157.48 96.52) (xy 157.48 60.96)
+			(xy 157.48 96.52) (xy 157.48 85.09)
 		)
 		(stroke
 			(width 0)
@@ -3125,6 +3181,16 @@
 			(type default)
 		)
 		(uuid "635dba74-6d05-4427-938c-3cb3fd766ed0")
+	)
+	(wire
+		(pts
+			(xy 157.48 85.09) (xy 191.77 85.09)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "63d52e1d-3d46-4d07-822b-d606a801d48b")
 	)
 	(wire
 		(pts
@@ -3748,6 +3814,16 @@
 	)
 	(wire
 		(pts
+			(xy 191.77 110.49) (xy 157.48 110.49)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a97da26d-c8f1-468a-a6a6-f81e53485dbe")
+	)
+	(wire
+		(pts
 			(xy 270.51 109.22) (xy 270.51 99.06)
 		)
 		(stroke
@@ -4078,6 +4154,16 @@
 	)
 	(wire
 		(pts
+			(xy 157.48 85.09) (xy 157.48 60.96)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d515e56c-ea54-4795-b56a-5b3d380b7813")
+	)
+	(wire
+		(pts
 			(xy 265.43 53.34) (xy 267.97 53.34)
 		)
 		(stroke
@@ -4195,6 +4281,16 @@
 			(type default)
 		)
 		(uuid "e1b22338-1bc1-4158-b1bb-3bcfd6a05e7b")
+	)
+	(wire
+		(pts
+			(xy 189.23 134.62) (xy 157.48 134.62)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e2049939-0e0e-4e73-8db6-431b34c89ed3")
 	)
 	(wire
 		(pts
@@ -4926,7 +5022,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "21153ebe-4a64-44ae-9710-6ce11dd6dd26")
-		(property "Reference" "S11"
+		(property "Reference" "S10"
 			(at 64.77 147.32 0)
 			(effects
 				(font
@@ -5100,7 +5196,7 @@
 		(instances
 			(project "bledeck"
 				(path "/8bba6075-8a84-4835-a7b9-00f9c9f191ba"
-					(reference "S11")
+					(reference "S10")
 					(unit 1)
 				)
 			)
@@ -5321,7 +5417,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "25eb8ee1-fb6a-40ae-aa6a-01397a6ae7c7")
-		(property "Reference" "S13"
+		(property "Reference" "S11"
 			(at 87.63 147.32 0)
 			(effects
 				(font
@@ -5495,7 +5591,7 @@
 		(instances
 			(project "bledeck"
 				(path "/8bba6075-8a84-4835-a7b9-00f9c9f191ba"
-					(reference "S13")
+					(reference "S11")
 					(unit 1)
 				)
 			)
@@ -7622,7 +7718,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9ea8fb62-3549-43c5-a040-05c30bad4843")
-		(property "Reference" "S15"
+		(property "Reference" "S12"
 			(at 110.49 147.32 0)
 			(effects
 				(font
@@ -7796,7 +7892,7 @@
 		(instances
 			(project "bledeck"
 				(path "/8bba6075-8a84-4835-a7b9-00f9c9f191ba"
-					(reference "S15")
+					(reference "S12")
 					(unit 1)
 				)
 			)
@@ -9325,7 +9421,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "c5bac389-c3b4-4e4d-85eb-e2a4763b57c5")
-		(property "Reference" "S10"
+		(property "Reference" "S13"
 			(at 41.91 161.29 0)
 			(effects
 				(font
@@ -9499,7 +9595,7 @@
 		(instances
 			(project "bledeck"
 				(path "/8bba6075-8a84-4835-a7b9-00f9c9f191ba"
-					(reference "S10")
+					(reference "S13")
 					(unit 1)
 				)
 			)
@@ -9515,7 +9611,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "cca5f80d-eb3c-4545-aa16-df06c429cbd5")
-		(property "Reference" "S14"
+		(property "Reference" "S15"
 			(at 87.63 161.29 0)
 			(effects
 				(font
@@ -9689,7 +9785,7 @@
 		(instances
 			(project "bledeck"
 				(path "/8bba6075-8a84-4835-a7b9-00f9c9f191ba"
-					(reference "S14")
+					(reference "S15")
 					(unit 1)
 				)
 			)
@@ -11015,7 +11111,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f1940e69-cd86-4f51-9f4d-4e9105b1b2cb")
-		(property "Reference" "S12"
+		(property "Reference" "S14"
 			(at 64.77 161.29 0)
 			(effects
 				(font
@@ -11189,7 +11285,7 @@
 		(instances
 			(project "bledeck"
 				(path "/8bba6075-8a84-4835-a7b9-00f9c9f191ba"
-					(reference "S12")
+					(reference "S14")
 					(unit 1)
 				)
 			)

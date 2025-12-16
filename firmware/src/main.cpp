@@ -39,6 +39,11 @@ bool oldDeviceConnected = false;
 unsigned long lastPingTime = 0;
 unsigned long connectionStartTime = 0;
 
+// BATTERY PROPERTIES
+static uint32_t last_read_bat = 0;
+CircularBuffer<float, BAT_NUM_READ> bat_readings;
+int batteryLevel = 0;
+
 // Misc
 bool workstationLocked = false;
 unsigned long lastColorShift = 0;
@@ -59,7 +64,7 @@ void splitColorsString(String data, char delimiter, int *result, int expectedPar
 // OLED
 SSD1306Wire * display;
 
-void oledUpdate(int profile) {
+void oledUpdate() {
   display->clear();
 
   char profile_text[17];
@@ -68,17 +73,16 @@ void oledUpdate(int profile) {
   display->drawString(0, 0, profile_text);
 
   char profile_name[40];
-  snprintf(profile_name, sizeof(profile_name), "%s", profileNames[profile]);
+  snprintf(profile_name, sizeof(profile_name), "%s", profileNames[currentProfile]);
   display->setFont(ArialMT_Plain_24);
   display->drawString(0, 18, profile_name);
 
-  char bt_status[40];
-  snprintf(bt_status, sizeof(bt_status), "Bluetooth %s", deviceConnected ? "CONNECTED" : "DISCONNECTED");
+  char dev_status[40];
+  snprintf(dev_status, sizeof(dev_status), "BT: %s | Bat: %d%%", deviceConnected ? "CONN" : "DISCONN", batteryLevel);
   display->setFont(ArialMT_Plain_10);
-  display->drawString(0, 50, bt_status);
+  display->drawString(0, 50, dev_status);
   
   display->display();
-  Serial.println(profile_name);
 }
 
 void oledUpdateLockedStatus() {
@@ -87,8 +91,41 @@ void oledUpdateLockedStatus() {
     display->drawXbm((display->getWidth()-LOCK_IMAGE_WIDTH)/2, (display->getHeight()-LOCK_IMAGE_HEIGHT)/2, LOCK_IMAGE_WIDTH, LOCK_IMAGE_HEIGHT, LOCK_IMAGE);
     display->display();
   } else {
-    oledUpdate(currentProfile);
+    oledUpdate();
   }
+}
+
+// BATTERY MGMT
+void battery_loop(){
+    if (0 == last_read_bat || millis() - last_read_bat > BAT_INTERVAL_S) {
+
+        uint16_t v = analogRead(BAT_PIN);
+        if (v!=0) {
+            int vref = 1100;
+            float bat_voltage = v * (vref / 4095.0);
+            bat_readings.push(bat_voltage);
+            float bat_values = 0.0;
+            for (int i = 0; i < bat_readings.size(); ++i) {
+                bat_values = bat_values + bat_readings[i];
+            }
+
+            float avg_bat_voltage = (bat_values / bat_readings.size()) * ( (BAT_R1 + BAT_R2) / BAT_R2 ) / 1000;
+            float percent = (avg_bat_voltage - BAT_MIN_V) * 100.0 / (BAT_MAX_V - BAT_MIN_V);
+            
+            // Clamp between 0% and 100%
+            if (percent < 0) percent = 0;
+            if (percent > 100) percent = 100;
+            char batmgmt[24] = "" ;
+            sprintf (batmgmt, "Bat: %.1fV - %.0f%%", avg_bat_voltage, percent);
+            Serial.println(batmgmt);
+            batteryLevel = int(percent);
+        } else {
+            Serial.println("No battery!");
+            batteryLevel = 999;
+        }
+        last_read_bat = millis();
+        oledUpdate();
+    }
 }
 
 // RGB
@@ -272,7 +309,7 @@ void handlePacket(const ParsedPacket &pkt) {
           return;
         }
         currentProfile = idx;
-        oledUpdate(currentProfile);
+        oledUpdate();
         Serial.printf("Applied CHANGE_PROFILE from PC -> %d (%s)\n", idx, profileNames[idx].c_str());
       } else {
         Serial.printf("Error: Invalid profile index %d\n", profileIndex);
@@ -318,7 +355,7 @@ void handlePacket(const ParsedPacket &pkt) {
       }
 
       // Update display with current profile
-      oledUpdate(currentProfile);
+      oledUpdate();
       break;
     }
 
@@ -394,7 +431,7 @@ void handlePacket(const ParsedPacket &pkt) {
       } else if (lockFlag == 0x00) {
         workstationLocked = false;
         display->setBrightness(100);
-        oledUpdate(currentProfile);
+        oledUpdate();
         Serial.println("Device UNLOCKED");
       } else {
         Serial.printf("Error: Invalid lock flag 0x%02X\n", lockFlag);
@@ -410,7 +447,7 @@ void handlePacket(const ParsedPacket &pkt) {
 
 void handleProfileChange() {
   Serial.printf("Profile changed to: %d (%s)\n", currentProfile, profileNames[currentProfile].c_str());
-  oledUpdate(currentProfile);
+  oledUpdate();
 
   // Send profile change notification if connected
   if (deviceConnected) {
@@ -452,7 +489,7 @@ class ServerCallbacks : public BLEServerCallbacks {
     rgbUpdateColors(rgbColors);
 
     // Update OLED display
-    oledUpdate(currentProfile);
+    oledUpdate();
 
     Serial.println("Reset complete - back to default profile");
 
@@ -534,48 +571,15 @@ void knobCallback( long value ) {
 
 // KEYS
 char hexaKeys[4][4] = {
-  {'F','B','7','3'},
-  {'E','A','6','2'},
-  {'D','9','5','1'},
-  {'C','8','4','0'}
+  {'0','1','2','3'},
+  {'4','5','6','7'},
+  {'8','A','C','E'},
+  {'9','B','D','F'}
 };
 
 byte rowPins[4] = {ROW_PIN_1, ROW_PIN_2, ROW_PIN_3, ROW_PIN_4};
 byte colPins[4] = {COL_PIN_1, COL_PIN_2, COL_PIN_3, COL_PIN_4};
 Keypad* keypad;
-
-// BATTERY
-static uint32_t last_read_bat = 0;
-CircularBuffer<float, BAT_NUM_READ> bat_readings;
-
-void battery_loop(){
-    if (0 == last_read_bat || millis() - last_read_bat > BAT_INTERVAL_S) {
-
-        uint16_t v = analogRead(BAT_PIN);
-        if (v!=0) {
-            int vref = 1100;
-            float bat_voltage = v * (vref / 4095.0);
-            bat_readings.push(bat_voltage);
-            float bat_values = 0.0;
-            for (int i = 0; i < bat_readings.size(); ++i) {
-                bat_values = bat_values + bat_readings[i];
-            }
-
-            float avg_bat_voltage = (bat_values / bat_readings.size()) * ( (BAT_R1 + BAT_R2) / BAT_R2 ) / 1000;
-            float percent = (avg_bat_voltage - BAT_MIN_V) * 100.0 / (BAT_MAX_V - BAT_MIN_V);
-            
-            // Clamp between 0% and 100%
-            if (percent < 0) percent = 0;
-            if (percent > 100) percent = 100;
-            char batmgmt[24] = "" ;
-            sprintf (batmgmt, "Bat: %.1fV - %.0f%%", avg_bat_voltage, percent);
-            Serial.println(batmgmt);
-        } else {
-            Serial.println("No battery!");
-        }
-        last_read_bat = millis();
-    }
-}
 
 void setup() {
   // Misc
@@ -651,7 +655,7 @@ void setup() {
   pServer->getAdvertising()->start();
   
   // Profiles
-  oledUpdate(currentProfile);
+  oledUpdate();
 
   // RGB
   rgbUpdateColors(rgbColors);
