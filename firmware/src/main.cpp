@@ -666,9 +666,11 @@ void setup() {
 
   // RGB
   rgbUpdateColors(rgbColors);
-
+  
+  #ifdef USE_BATTERY
   // Battery
   analogSetPinAttenuation(BAT_PIN, ADC_11db); // 0.1-3.1V range
+  #endif
 
   Serial.println("Firmware ready - Advertising started");
   lastPingTime = millis();
