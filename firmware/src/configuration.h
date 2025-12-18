@@ -31,12 +31,13 @@
 #define RGB_NUM                 1
 
 // Power Management
+#define USE_BATTERY
 #define BAT_INTERVAL_S          (30 * 1000) 
-#define BAT_R1                  15000.0         // top resistor (to VIN)
-#define BAT_R2                  4300.0          // bottom resistor (to GND)
+#define BAT_R1                  6200.0          // top resistor (to VIN)
+#define BAT_R2                  10000.0         // bottom resistor (to GND)
 #define BAT_NUM_READ            5
-#define BAT_MAX_V               5.0             // USB Voltage or Max Voltage of a 1s1p lipo cell
-#define BAT_MIN_V               2.4             // Min voltage to operate the MCU
+#define BAT_MAX_V               4200            // USB Voltage or Max Voltage of a 1s1p lipo cell (in mV)
+#define BAT_MIN_V               3700            // Min voltage to operate BLEDeck (in mV)
 #define BAT_PIN                 GPIO_NUM_13
 
 #endif // CONFIGURATION_H

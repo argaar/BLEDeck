@@ -18,7 +18,9 @@
 
 #include <NeoPixelBus.h>
 
+#ifdef USE_BATTERY
 #include "CircularBuffer.hpp"
+#endif
 
 #include <vector>
 
@@ -40,9 +42,11 @@ unsigned long lastPingTime = 0;
 unsigned long connectionStartTime = 0;
 
 // BATTERY PROPERTIES
+#ifdef USE_BATTERY
 static uint32_t last_read_bat = 0;
 CircularBuffer<float, BAT_NUM_READ> bat_readings;
 int batteryLevel = 0;
+#endif
 
 // Misc
 bool workstationLocked = false;
@@ -78,7 +82,11 @@ void oledUpdate() {
   display->drawString(0, 18, profile_name);
 
   char dev_status[40];
+  #ifdef USE_BATTERY
   snprintf(dev_status, sizeof(dev_status), "BT: %s | Bat: %d%%", deviceConnected ? "CONN" : "DISCONN", batteryLevel);
+  #else
+  snprintf(dev_status, sizeof(dev_status), "BT: %s", deviceConnected ? "CONN" : "DISCONN");
+  #endif
   display->setFont(ArialMT_Plain_10);
   display->drawString(0, 50, dev_status);
   
@@ -96,27 +104,25 @@ void oledUpdateLockedStatus() {
 }
 
 // BATTERY MGMT
-void battery_loop(){
+#ifdef USE_BATTERY
+void batteryLoop(){
     if (0 == last_read_bat || millis() - last_read_bat > BAT_INTERVAL_S) {
 
-        uint16_t v = analogRead(BAT_PIN);
-        if (v!=0) {
-            int vref = 1100;
-            float bat_voltage = v * (vref / 4095.0);
-            bat_readings.push(bat_voltage);
+        uint16_t v = analogReadMilliVolts(BAT_PIN);
+        if (v!=0) {  
+            bat_readings.push(v);
             float bat_values = 0.0;
             for (int i = 0; i < bat_readings.size(); ++i) {
                 bat_values = bat_values + bat_readings[i];
             }
-
-            float avg_bat_voltage = (bat_values / bat_readings.size()) * ( (BAT_R1 + BAT_R2) / BAT_R2 ) / 1000;
+            float avg_bat_voltage = (bat_values / bat_readings.size()) * ( (BAT_R1 + BAT_R2) / BAT_R2 );
             float percent = (avg_bat_voltage - BAT_MIN_V) * 100.0 / (BAT_MAX_V - BAT_MIN_V);
             
             // Clamp between 0% and 100%
             if (percent < 0) percent = 0;
             if (percent > 100) percent = 100;
             char batmgmt[24] = "" ;
-            sprintf (batmgmt, "Bat: %.1fV - %.0f%%", avg_bat_voltage, percent);
+            sprintf (batmgmt, "Bat: %.1fV - %.0f%%", avg_bat_voltage/1000, percent);
             Serial.println(batmgmt);
             batteryLevel = int(percent);
         } else {
@@ -127,6 +133,7 @@ void battery_loop(){
         oledUpdate();
     }
 }
+#endif
 
 // RGB
 NeoPixelBus<NeoGrbFeature, NeoWs2812xMethod> rgb_keys(RGB_NUM, RGB_PIN);
@@ -661,7 +668,7 @@ void setup() {
   rgbUpdateColors(rgbColors);
 
   // Battery
-  analogSetAttenuation(ADC_0db); // 0-1.1V range
+  analogSetPinAttenuation(BAT_PIN, ADC_11db); // 0.1-3.1V range
 
   Serial.println("Firmware ready - Advertising started");
   lastPingTime = millis();
@@ -745,8 +752,10 @@ void loop() {
     }
   }
 
+  #ifdef USE_BATTERY
   // Update adc reading
-  battery_loop();
+  batteryLoop();
+  #endif
 
   // Small delay to prevent overwhelming the BLE stack
   delay(10);
