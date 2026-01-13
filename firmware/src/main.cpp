@@ -580,8 +580,8 @@ void knobCallback( long value ) {
 char hexaKeys[4][4] = {
   {'0','1','2','3'},
   {'4','5','6','7'},
-  {'8','A','C','E'},
-  {'9','B','D','F'}
+  {'8','9','A','B'},
+  {'C','D','E','F'}
 };
 
 byte rowPins[4] = {ROW_PIN_1, ROW_PIN_2, ROW_PIN_3, ROW_PIN_4};

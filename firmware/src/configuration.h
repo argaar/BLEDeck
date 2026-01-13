@@ -28,7 +28,7 @@
 
 // RGB
 #define RGB_PIN                 GPIO_NUM_14
-#define RGB_NUM                 1
+#define RGB_NUM                 16
 
 // Power Management
 #define USE_BATTERY

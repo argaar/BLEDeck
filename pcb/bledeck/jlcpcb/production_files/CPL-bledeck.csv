@@ -17,6 +17,7 @@ D8,WS2812B-4020,WS2812B-4020,152.0,-126.85,0.0,top
 D9,WS2812B-4020,WS2812B-4020,92.0,-146.85,0.0,top
 J1,Conn_01x09_Socket,oled_rotary,121.5,-71.5,180.0,top
 J2,Conn_01x02_Socket,PinHeader_1x02_P2.54mm_Vertical,142.23,-56.5,90.0,top
+JP1,Jumper_Closed,PinHeader_1x02_P2.54mm_Vertical,86.0,-63.77,180.0,top
 R1,15k,R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal,92.5,-65.69,-90.0,top
 R2,4.3k,R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal,92.5,-77.19,-90.0,top
 S1,PG151101S11,Kailh_socket_MX,91.365,-98.70695,0.0,top
