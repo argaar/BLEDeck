@@ -1,6 +1,7 @@
 # BLEDeck Windows App
 
-PyQt5 desktop application for the BLEDeck macro pad. Connects over BLE, manages profiles, assigns shell commands to keys, and syncs colors to the device.
+PyQt5 desktop application for the BLEDeck macro pad.
+Connects over BLE, manages profiles, assigns shell commands to keys, and syncs colors to the device.
 
 ---
 
@@ -77,7 +78,6 @@ Closing or minimising the window hides it to the system tray. Double-click or si
 | `ble_client.py` | BleakClient re-export and BLE characteristic UUIDs |
 | `profile_manager.py` | Load/save `profiles.json` |
 | `profiles.json` | Auto-created on first run; stores all profiles and key configurations |
-| `CLAUDE.md` | AI coding rules for this module |
 
 ---
 
@@ -129,5 +129,4 @@ python protocol_decoder.py "aa 85 00 01 48"
 - **Windows only** - uses PyQt5 and bleak; no macOS or Linux support yet
 - **Shell commands only** - keys execute shell commands; native keyboard injection is not implemented
 - **Screen lock detection disabled** - the firmware supports a lock opcode but reliable detection from the app is not yet implemented
-- **profiles.json saves to the working directory** - not the Windows `%APPDATA%` folder
 - **10 profiles max, 16 keys per profile** - protocol limit
