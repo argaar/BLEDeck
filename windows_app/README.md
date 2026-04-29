@@ -35,7 +35,7 @@ python main.py
 ### Connecting
 
 1. Power on the BLEDeck device.
-2. Click **Connect** — the app scans for a device advertising as `BLEDeck` and connects automatically.
+2. Click **Connect** - the app scans for a device advertising as `BLEDeck` and connects automatically.
 3. On connect the app: sends a keep-alive ping, syncs all profile names to the device, then pushes the current profile index and RGB key colors.
 4. Enable **Auto-reconnect** to have the app reconnect automatically if the connection drops.
 
@@ -51,9 +51,9 @@ Switching profiles in the app sends the new profile data to the device. Turning 
 ### Keys
 
 1. Click a key button in the 4×4 grid to select it.
-2. Set a **Label** — shown on the button in the app.
-3. Set a **Color** — enter `R,G,B,Brightness%` directly (e.g. `255,0,0,70`) or use **Pick Color** and the brightness slider. The LED on the device updates immediately.
-4. Set a **Command** — any shell command or executable path (e.g. `notepad.exe`, `calc.exe`, `"C:\my app\tool.exe"`, `cmd /c echo hello`). Use **Browse** to pick an `.exe`.
+2. Set a **Label** - shown on the button in the app.
+3. Set a **Color** - enter `R,G,B,Brightness%` directly (e.g. `255,0,0,70`) or use **Pick Color** and the brightness slider. The LED on the device updates immediately.
+4. Set a **Command** - any shell command or executable path (e.g. `notepad.exe`, `calc.exe`, `"C:\my app\tool.exe"`, `cmd /c echo hello`). Use **Browse** to pick an `.exe`.
 5. Click **Save Profile** to persist the configuration.
 
 When a key is pressed on the device, the app executes the configured command via `subprocess`.
@@ -72,7 +72,7 @@ Closing or minimising the window hides it to the system tray. Double-click or si
 
 | File | Purpose |
 |------|---------|
-| `main.py` | `BLEDeckGUI` — main window, BLE lifecycle, notification dispatch, command execution |
+| `main.py` | `BLEDeckGUI` - main window, BLE lifecycle, notification dispatch, command execution |
 | `ble_protocol.py` | Packet builders, parsers, all opcode constants |
 | `ble_client.py` | BleakClient re-export and BLE characteristic UUIDs |
 | `profile_manager.py` | Load/save `profiles.json` |
@@ -126,8 +126,8 @@ python protocol_decoder.py "aa 85 00 01 48"
 
 ## Limitations
 
-- **Windows only** — uses PyQt5 and bleak; no macOS or Linux support yet
-- **Shell commands only** — keys execute shell commands; native keyboard injection is not implemented
-- **Screen lock detection disabled** — the firmware supports a lock opcode but reliable detection from the app is not yet implemented
-- **profiles.json saves to the working directory** — not the Windows `%APPDATA%` folder
-- **10 profiles max, 16 keys per profile** — protocol limit
+- **Windows only** - uses PyQt5 and bleak; no macOS or Linux support yet
+- **Shell commands only** - keys execute shell commands; native keyboard injection is not implemented
+- **Screen lock detection disabled** - the firmware supports a lock opcode but reliable detection from the app is not yet implemented
+- **profiles.json saves to the working directory** - not the Windows `%APPDATA%` folder
+- **10 profiles max, 16 keys per profile** - protocol limit

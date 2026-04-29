@@ -123,7 +123,7 @@ aa 85 00 01 48
 ```
 aa 85 00 01 ff
 ```
-**Meaning**: No battery detected — device is running on USB only (`0xFF` sentinel).
+**Meaning**: No battery detected - device is running on USB only (`0xFF` sentinel).
 
 ### Example 8: Set All RGB Keys
 ```

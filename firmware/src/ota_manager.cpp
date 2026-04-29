@@ -29,7 +29,7 @@ void OtaManager::connectSta(const char* ssid, const char* password) {
   unsigned long t = millis();
   uint8_t dots = 0;
   while (WiFi.status() != WL_CONNECTED) {
-    if (millis() - t > 15000) return;   // timed out — caller checks status
+    if (millis() - t > 15000) return;   // timed out - caller checks status
     delay(400);
     dots = (dots % 3) + 1;
     char buf[28];
@@ -49,7 +49,7 @@ void OtaManager::startAp(const char* otaPassword) {
   display_->drawString(0, 14, "Starting AP...");
   display_->display();
 
-  // Mode switch then softAP with delay between — fixes "ESP_XXXX" SSID bug
+  // Mode switch then softAP with delay between - fixes "ESP_XXXX" SSID bug
   WiFi.mode(WIFI_AP);
   delay(200);
   WiFi.softAP(OTA_AP_SSID, otaPassword);
@@ -85,7 +85,7 @@ void OtaManager::begin(const char* ssid, const char* password,
     Serial.printf("STA connected: %s\n", WiFi.localIP().toString().c_str());
   }
 
-  // ElegantOTA — serve at http://<ip>/update
+  // ElegantOTA - serve at http://<ip>/update
   // Empty username; OTA password used for HTTP Basic auth on the upload page
   ElegantOTA.begin(server_, "", otaPassword);
 

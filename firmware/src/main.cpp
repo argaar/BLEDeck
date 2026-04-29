@@ -765,7 +765,7 @@ void loop() {
 
   // OTA mode: hand off entirely to OTA manager
   if (otaActive) {
-    // BACK cancels OTA — but never interrupt an in-progress upload
+    // BACK cancels OTA - but never interrupt an in-progress upload
     if (btn_encoder_back.pressed() && !otaManager->isUpdating()) {
       Serial.println("OTA cancelled by user");
       delete otaManager;

@@ -1,6 +1,6 @@
 # BLEDeck Firmware
 
-ESP32 firmware for the BLEDeck macro pad. Built with PlatformIO and the Arduino framework. Acts as a BLE GATT peripheral — all logic and configuration are driven by the [Windows app](../windows_app/).
+ESP32 firmware for the BLEDeck macro pad. Built with PlatformIO and the Arduino framework. Acts as a BLE GATT peripheral - all logic and configuration are driven by the [Windows app](../windows_app/).
 
 ---
 
@@ -85,7 +85,7 @@ pio device monitor
 - 16 × WS2812B-4020 controlled via NeoPixelBus
 - App sets colors per-key (`OP_SET_RGB_KEY`) or all at once (`OP_SET_ALL_RGB_KEYS`)
 - Idle animation (rotating rainbow) plays when no app is connected
-- Colors reset to defaults on disconnect — the app re-applies them on every connect
+- Colors reset to defaults on disconnect - the app re-applies them on every connect
 
 ### OLED display
 - Shows current profile name, BLE connection status, and battery percentage
@@ -103,7 +103,7 @@ pio device monitor
 
 ### OTA update
 1. Long-press the PUSH button to open the settings menu
-2. Select **OTA Update** — BLE is shut down, WiFi starts
+2. Select **OTA Update** - BLE is shut down, WiFi starts
 3. Connect a browser to the device IP (or to `BLEDeck-OTA` AP if WiFi credentials fail)
 4. Upload a new `.bin` via the ElegantOTA web interface
 5. Device restarts automatically; press BACK to cancel before upload begins

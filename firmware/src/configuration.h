@@ -30,12 +30,12 @@
 #define RGB_PIN                 GPIO_NUM_14
 #define RGB_NUM                 16
 
-// BLE packet limits — must match ParsedPacket::payload size in protocolparser.h
+// BLE packet limits - must match ParsedPacket::payload size in protocolparser.h
 #define MAX_BLE_PAYLOAD_LEN  256
 #define MAX_BUTTON_NAME_LEN  32
 
 // OTA Update
-#include "credentials.h"   // gitignored — copy credentials.h.example and fill in
+#include "credentials.h"   // gitignored - copy credentials.h.example and fill in
 #define OTA_HOSTNAME            "bledeck"
 #define OTA_AP_SSID             "BLEDeck-OTA"   // AP fallback network name
 #define OTA_TIMEOUT_MS          300000UL    // 5 minutes

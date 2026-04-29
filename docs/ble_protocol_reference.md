@@ -60,7 +60,7 @@ All packets follow this structure:
 # 4. Payload Formats
 This section defines the payload layout for each opcode.
 
-## 4.1 Keep Alive — `0x01`
+## 4.1 Keep Alive - `0x01`
 **Payload:** none
 
 Packet:
@@ -68,7 +68,7 @@ Packet:
 AA 01 00 00
 ```
 
-### 4.1.1 Keep Alive Reply — `0x81`
+### 4.1.1 Keep Alive Reply - `0x81`
 **Payload:** none
 
 Packet:
@@ -78,7 +78,7 @@ AA 81 00 00
 
 ---
 
-## 4.2 Change Profile — `0x02`
+## 4.2 Change Profile - `0x02`
 Sends complete profile data including name and 16 RGBW values.
 
 ### Payload Structure
@@ -94,10 +94,10 @@ Sends complete profile data including name and 16 RGBW values.
 +------------------+
 ```
 
-- `profile_index` — integer 1..255
-- `name_length` — length of profile name in bytes
-- `name` — UTF-8 encoded string
-- `keys` — 16 × RGBW values (each 4 bytes)
+- `profile_index` - integer 1..255
+- `name_length` - length of profile name in bytes
+- `name` - UTF-8 encoded string
+- `keys` - 16 × RGBW values (each 4 bytes)
 
 Each RGBW:
 ```
@@ -106,7 +106,7 @@ R(1B), G(1B), B(1B), W(1B)
 
 ---
 
-## 4.3 Sync Profiles — `0x03`
+## 4.3 Sync Profiles - `0x03`
 Sends a dictionary of `index → name` entries.
 
 ### Payload Structure
@@ -123,15 +123,15 @@ Sends a dictionary of `index → name` entries.
 +------------------+
 ```
 
-- `count` — number of profile entries
+- `count` - number of profile entries
 - For each entry:
-  - `index` — profile index
-  - `name_len` — name length
-  - `name` — profile name (UTF-8)
+  - `index` - profile index
+  - `name_len` - name length
+  - `name` - profile name (UTF-8)
 
 ---
 
-## 4.4 Set RGB Key — `0x04`
+## 4.4 Set RGB Key - `0x04`
 Sets the RGBW value for a single key.
 
 ### Payload Structure
@@ -143,12 +143,12 @@ Sets the RGBW value for a single key.
 +--------------------+
 ```
 
-- `key_index` — which key (0–15)
-- `R,G,B,W` — color values (0–255)
+- `key_index` - which key (0–15)
+- `R,G,B,W` - color values (0–255)
 
 ---
 
-## 4.5 Set All RGB Keys — `0x05`
+## 4.5 Set All RGB Keys - `0x05`
 Sets RGBW values for all 16 keys at once. This is typically sent when switching profiles to update all LEDs simultaneously.
 
 ### Payload Structure
@@ -168,7 +168,7 @@ Sets RGBW values for all 16 keys at once. This is typically sent when switching 
 
 ---
 
-## 4.6 Lock Device — `0x06`
+## 4.6 Lock Device - `0x06`
 Locks or unlocks device functionality.
 
 ### Payload Structure
@@ -190,7 +190,7 @@ AA 06 00 01  01
 
 ---
 
-## 4.7 Profile Changed (Arduino → Python) — `0x82`
+## 4.7 Profile Changed (Arduino → Python) - `0x82`
 Sent when the user switches profile on the device.
 
 ### Payload Structure
@@ -202,7 +202,7 @@ Sent when the user switches profile on the device.
 
 ---
 
-## 4.8 Button Pressed (Arduino → Python) — `0x83`
+## 4.8 Button Pressed (Arduino → Python) - `0x83`
 Sent when a button (CON, BACK, PUSH) is pressed on the device.
 
 ### Payload Structure
@@ -214,13 +214,13 @@ Sent when a button (CON, BACK, PUSH) is pressed on the device.
 +------------------+
 ```
 
-- `profile_index` — current active profile index
-- `name_length` — length of button name
-- `button_name` — button identifier string (e.g., "CON", "BACK", "PUSH")
+- `profile_index` - current active profile index
+- `name_length` - length of button name
+- `button_name` - button identifier string (e.g., "CON", "BACK", "PUSH")
 
 ---
 
-## 4.9 Key Pressed (Arduino → Python) — `0x84`
+## 4.9 Key Pressed (Arduino → Python) - `0x84`
 Sent when a keypad key (0-9, A-F) is pressed on the device.
 
 ### Payload Structure
@@ -231,12 +231,12 @@ Sent when a keypad key (0-9, A-F) is pressed on the device.
 +------------------+
 ```
 
-- `profile_index` — current active profile index
-- `key` — ASCII value of the key pressed (0-9, A-F)
+- `profile_index` - current active profile index
+- `key` - ASCII value of the key pressed (0-9, A-F)
 
 ---
 
-## 4.10 Battery Status (Arduino → Python) — `0x85`
+## 4.10 Battery Status (Arduino → Python) - `0x85`
 Sent automatically after each ADC battery reading (~every 30 s) while a host is connected.
 
 ### Payload Structure
@@ -246,7 +246,7 @@ Sent automatically after each ADC battery reading (~every 30 s) while a host is 
 +-----------+
 ```
 
-- `percent` — battery level `0–100` (integer percentage), or `0xFF` (255) when no battery is detected (e.g. device running on USB without a LiPo cell)
+- `percent` - battery level `0–100` (integer percentage), or `0xFF` (255) when no battery is detected (e.g. device running on USB without a LiPo cell)
 
 Example (72 % battery):
 ```
