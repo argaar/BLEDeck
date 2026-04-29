@@ -234,7 +234,12 @@ class BLEDeckGUI(QMainWindow):
         # Connection status
         self.status_label = QLabel("Status: Disconnected")
         layout.addWidget(self.status_label)
-        
+
+        # Battery level (populated once device sends OP_BATTERY_STATUS)
+        self.battery_label = QLabel("")
+        self.battery_label.setStyleSheet("color: gray;")
+        layout.addWidget(self.battery_label)
+
         # Connect button
         self.connect_btn = QPushButton("Connect")
         self.connect_btn.clicked.connect(self.toggle_connection)
@@ -886,9 +891,10 @@ class BLEDeckGUI(QMainWindow):
         
         # Update UI
         self.status_label.setText("Status: Disconnected")
+        self.battery_label.setText("")
         self.connect_btn.setText("Connect")
         self.status_bar.showMessage("Disconnected")
-        
+
         # Reset key states
         for btn in self.key_buttons.values():
             btn.set_active(False)
@@ -1015,7 +1021,7 @@ class BLEDeckGUI(QMainWindow):
             opcode_hint = ""
             if len(data) >= 2:
                 op = data[1]
-                op_names = {0x81:"PONG", 0x82:"PROFILE", 0x83:"BUTTON", 0x84:"KEY"}
+                op_names = {0x81:"PONG", 0x82:"PROFILE", 0x83:"BUTTON", 0x84:"KEY", 0x85:"BATTERY"}
                 opcode_hint = f" [{op_names.get(op, f'0x{op:02X}')}]"
             self.log(f"← {data.hex()}{opcode_hint}")
 
@@ -1067,6 +1073,14 @@ class BLEDeckGUI(QMainWindow):
                 profile_index, button_name = ble_protocol.parse_button_pressed(payload)
                 self.log(f"🔘 Button pressed: '{button_name}' on profile {profile_index}")
                 # You can add button-specific handling here if needed
+
+            elif opcode == ble_protocol.OP_BATTERY_STATUS:
+                percent = ble_protocol.parse_battery_status(payload)
+                if percent == 255:
+                    self.log("🔋 Battery: USB / no battery")
+                else:
+                    self.log(f"🔋 Battery: {percent}%")
+                self.update_battery_display(percent)
 
             else:
                 self.log(f"⚠️ Unknown opcode: 0x{opcode:02X}")
@@ -1167,6 +1181,12 @@ class BLEDeckGUI(QMainWindow):
             return chr(ord('A') + key_id - 10)  # 10->A, 11->B, etc.
         return None
     
+    def update_battery_display(self, percent: int):
+        if percent == 255:
+            self.battery_label.setText("USB")
+        else:
+            self.battery_label.setText(f"Bat: {percent}%")
+
     def log(self, message):
         self.log_text.append(message)
         # Auto-scroll to bottom

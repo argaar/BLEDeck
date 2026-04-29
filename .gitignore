@@ -1,5 +1,4 @@
 windows_app/__pycache__
-windows_app/.claude
 windows_app/env
 windows_app/profiles.json
 
@@ -14,4 +13,7 @@ pcb/bledeck/bledeck.kicad_prl
 pcb/bledeck/jlcpcb/gerber
 pcb/bledeck/jlcpcb/project.db
 
+.claude
+
 .vscode
+CLAUDE.md

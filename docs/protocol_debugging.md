@@ -12,7 +12,7 @@ The protocol uses binary packets with the following structure:
 - **START_BYTE**: Always `0xAA`
 - **OPCODE**: Command/Event identifier (1 byte)
 - **LENGTH**: Payload length in bytes, big-endian (2 bytes)
-- **PAYLOAD**: Variable-length data (0-255 bytes)
+- **PAYLOAD**: Variable-length data (0–256 bytes max)
 
 ## Using the Protocol Decoder
 
@@ -117,6 +117,14 @@ aa 84 00 02 00 41
 ```
 - Byte 4: Profile index (0-based)
 - Byte 5: Key character ASCII (0x41 = 'A')
+
+#### Battery Status (0x85)
+```
+aa 85 00 01 48    (72% battery)
+aa 85 00 01 ff    (no battery / USB-only)
+```
+- Byte 4: Battery percentage `0–100`, or `0xFF` when no LiPo cell is detected
+- Sent automatically ~every 30 s while a host is connected
 
 ## Debugging in the Windows App
 
@@ -269,7 +277,7 @@ Match these with the app logs to verify communication.
 - [ ] Strings are UTF-8 encoded with length prefix
 - [ ] RGB values are in range 0-255
 - [ ] All multi-byte values are big-endian
-- [ ] Packet fits within BLE MTU (typically 512 bytes)
+- [ ] Packet fits within protocol limit (max payload 256 bytes)
 
 ## Example Debugging Session
 

@@ -27,6 +27,7 @@ AA | OP | LL LL | [PAYLOAD...]
 - `82` - Profile Changed
 - `83` - Button Pressed
 - `84` - Key Pressed
+- `85` - Battery Status
 
 ## Reading Packets
 
@@ -108,7 +109,23 @@ aa 06 00 01 01
 ```
 **Meaning**: Lock the device (workstation locked).
 
-### Example 7: Set All RGB Keys
+### Example 7: Battery Status
+```
+aa 85 00 01 48
+│  │  │  │  └─ Payload: 0x48 = 72 (72% battery)
+│  │  │  └─ Length low: 01 (1 byte payload)
+│  │  └─ Length high: 00
+│  └─ Opcode: 85 (Battery Status)
+└─ Start: AA ✓
+```
+**Meaning**: Device is at 72% battery.
+
+```
+aa 85 00 01 ff
+```
+**Meaning**: No battery detected — device is running on USB only (`0xFF` sentinel).
+
+### Example 8: Set All RGB Keys
 ```
 aa 05 00 40 ff 00 00 32 ff 00 00 32 ... (64 bytes total)
 │  │  │  │  └──┴──┴──┴──┘ └──┴──┴──┴──┘

@@ -51,6 +51,7 @@ All packets follow this structure:
 | `0x82` | Profile Changed | Arduino notifies that the user switched profile |
 | `0x83` | Button Pressed | Arduino notifies that a button was pressed |
 | `0x84` | Key Pressed | Arduino notifies that a keypad key was pressed |
+| `0x85` | Battery Status | Arduino reports current battery level (sent after each ADC reading, ~every 30 s) |
 
 *(No lock event exists; locking is one-way as requested.)*
 
@@ -232,6 +233,30 @@ Sent when a keypad key (0-9, A-F) is pressed on the device.
 
 - `profile_index` — current active profile index
 - `key` — ASCII value of the key pressed (0-9, A-F)
+
+---
+
+## 4.10 Battery Status (Arduino → Python) — `0x85`
+Sent automatically after each ADC battery reading (~every 30 s) while a host is connected.
+
+### Payload Structure
+```
++-----------+
+| percent 1B|
++-----------+
+```
+
+- `percent` — battery level `0–100` (integer percentage), or `0xFF` (255) when no battery is detected (e.g. device running on USB without a LiPo cell)
+
+Example (72 % battery):
+```
+AA 85 00 01  48
+```
+
+Example (USB / no battery):
+```
+AA 85 00 01  FF
+```
 
 ---
 

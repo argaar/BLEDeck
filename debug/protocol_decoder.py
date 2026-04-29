@@ -23,6 +23,7 @@ OP_KEEP_ALIVE_REPLY  = 0x81
 OP_PROFILE_CHANGED   = 0x82
 OP_BUTTON_PRESSED    = 0x83
 OP_KEY_PRESSED       = 0x84
+OP_BATTERY_STATUS    = 0x85
 
 OPCODE_NAMES = {
     0x01: "KEEP_ALIVE",
@@ -35,6 +36,7 @@ OPCODE_NAMES = {
     0x82: "PROFILE_CHANGED",
     0x83: "BUTTON_PRESSED",
     0x84: "KEY_PRESSED",
+    0x85: "BATTERY_STATUS",
 }
 
 def decode_packet(hex_string):
@@ -241,6 +243,21 @@ def decode_payload(opcode, payload):
         print(f"    Profile Index: {profile_idx} (0-based)")
         print(f"    Key Character: '{key_char}' (0x{payload[1]:02X})")
 
+    elif opcode == OP_BATTERY_STATUS:
+        print("  ➤ Battery Status (Device Event)")
+        if len(payload) < 1:
+            print("    ❌ Payload too short")
+            return
+
+        pct = payload[0]
+        if pct == 0xFF:
+            print("    Battery: 0xFF → no battery detected (USB-only power)")
+        else:
+            bar_filled = round(pct / 10)
+            bar = "█" * bar_filled + "░" * (10 - bar_filled)
+            print(f"    Battery: {pct}%")
+            print(f"    Level  : [{bar}]")
+
     else:
         print(f"  ⚠️  Unknown opcode 0x{opcode:02X}")
         if payload:
@@ -264,6 +281,8 @@ def create_test_packets():
         ("Sync Profiles (2 profiles)", "aa030009020154657374031044656661756c74"),
         ("Button Pressed (CON)", "aa83000400030343434e"),
         ("Key Pressed (key 'A')", "aa840002000141"),
+        ("Battery Status (72%)", "aa850001" + "48"),
+        ("Battery Status (USB/none)", "aa850001" + "ff"),
     ]
 
     for name, hex_data in examples:

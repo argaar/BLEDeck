@@ -30,14 +30,25 @@
 #define RGB_PIN                 GPIO_NUM_14
 #define RGB_NUM                 16
 
+// BLE packet limits — must match ParsedPacket::payload size in protocolparser.h
+#define MAX_BLE_PAYLOAD_LEN  256
+#define MAX_BUTTON_NAME_LEN  32
+
+// OTA Update
+#include "credentials.h"   // gitignored — copy credentials.h.example and fill in
+#define OTA_HOSTNAME            "bledeck"
+#define OTA_AP_SSID             "BLEDeck-OTA"   // AP fallback network name
+#define OTA_TIMEOUT_MS          300000UL    // 5 minutes
+#define MENU_LONG_PRESS_MS      1500         // ms to hold PUSH to open menu
+
 // Power Management
 #define USE_BATTERY
 #define BAT_INTERVAL_S          (30 * 1000) 
 #define BAT_R1                  6200.0          // top resistor (to VIN)
 #define BAT_R2                  10000.0         // bottom resistor (to GND)
 #define BAT_NUM_READ            5
-#define BAT_MAX_V               4200            // USB Voltage or Max Voltage of a 1s1p lipo cell (in mV)
-#define BAT_MIN_V               3700            // Min voltage to operate BLEDeck (in mV)
+#define BAT_MAX_V               4200            // Max voltage of a 1S LiPo cell (in mV)
+#define BAT_MIN_V               3200            // Min useful voltage of a 1S LiPo cell (in mV); 3700 showed 0% at ~15% remaining
 #define BAT_PIN                 GPIO_NUM_13
 
 #endif // CONFIGURATION_H
