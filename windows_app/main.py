@@ -190,6 +190,7 @@ class BLEDeckGUI(QMainWindow):
         self.ping_timer.timeout.connect(self.send_ping)
 
         # Setup timer to detect locked workstation
+        self.was_locked = False
         self.device_lock_timer = QTimer()
         self.device_lock_timer.timeout.connect(self.screen_locked)
         self.device_lock_timer.start(2500)
@@ -1197,21 +1198,24 @@ class BLEDeckGUI(QMainWindow):
         """
         Find if the user has locked their screen.
         """
-        #if self.is_connected:
-        #    user32 = ctypes.windll.User32
-        #    # Detect if the workstation is locked (Windows)
-        #    try:
-        #        # If the foreground window is the desktop window, assume locked
-        #        fg_window = user32.GetForegroundWindow()
-        #        desktop_window = user32.GetDesktopWindow()
-        #        is_locked = fg_window == desktop_window
-        #    except Exception as e:
-        #        self.log(f"Screen lock detection error: {e}")
-        #        is_locked = False
-        #    self.log(f"🔒 Screen locked: {is_locked}")
-        #    packet = ble_protocol.lock_device(is_locked)
-        #    asyncio.create_task(self.send_ble(packet))
-        pass # Currently disabled since unreliable
+        if self.is_connected:
+            user32 = ctypes.windll.User32
+            # Detect if the workstation is locked (Windows)          
+            # If the foreground window is 0, the screen is locked
+            is_locked = user32.GetForegroundWindow() % 10 == 0
+            
+            if is_locked:
+                packet = ble_protocol.lock_device(True)
+                asyncio.create_task(self.send_ble(packet))
+                self.was_locked = True
+                self.log("🔒 Screen locked: True")
+            elif self.was_locked and not is_locked:
+                packet = ble_protocol.lock_device(False)
+                asyncio.create_task(self.send_ble(packet))
+                self.was_locked = False
+                self.log("🔒 Screen locked: False")
+            else:
+                pass
 
     def changeEvent(self, event): # pyright: ignore[reportIncompatibleMethodOverride]
         """Intercept minimize event and hide window instead."""

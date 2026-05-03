@@ -155,7 +155,6 @@ The rotary encoder switches between profiles. The three encoder-side buttons (CO
 - **App required** - the device does not persist colors or profile names; it resets to defaults when the app disconnects. This is intentional
 - **Shell commands only** - keys execute shell commands via `subprocess`; native keyboard injection (e.g. sending Ctrl+C as a keypress) is not implemented
 - **10 profiles max, 16 keys per profile**
-- **Screen lock detection disabled** - the lock/unlock feature exists in the protocol but the detection side in the app is not yet reliable
 - **BLE range** - approximately 10 m in open space; walls reduce this
 - **Battery gauge accuracy** - ±5%, based on a two-resistor voltage divider and a 5-sample average; calibrated for 1S LiPo (3.2 V – 4.2 V)
 

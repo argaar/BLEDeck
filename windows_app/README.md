@@ -128,5 +128,4 @@ python protocol_decoder.py "aa 85 00 01 48"
 
 - **Windows only** - uses PyQt5 and bleak; no macOS or Linux support yet
 - **Shell commands only** - keys execute shell commands; native keyboard injection is not implemented
-- **Screen lock detection disabled** - the firmware supports a lock opcode but reliable detection from the app is not yet implemented
 - **10 profiles max, 16 keys per profile** - protocol limit
