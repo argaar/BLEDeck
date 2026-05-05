@@ -44,8 +44,7 @@ BLEDeck/
 │   ├── main.py                 BLEDeck GUI, BLE lifecycle, notification dispatch
 │   ├── ble_protocol.py         Packet builders, parsers, opcode constants
 │   ├── ble_client.py           BleakClient re-export + BLE UUIDs
-│   ├── profile_manager.py      Load/save profiles.json
-│   └── CLAUDE.md               AI coding rules for this module
+│   └── profile_manager.py      Load/save profiles.json
 ├── pcb/               KiCad schematic + layout + Gerbers
 ├── docs/              Protocol reference and debugging guides
 │   ├── ble_protocol_reference.md
