@@ -132,6 +132,9 @@ python protocol_decoder.py "aa 85 00 01 48"
 python protocol_decoder.py
 ```
 
+For advanced debugging see [`docs/protocol_debugging.md`](docs/protocol_debugging.md)
+In you're interested in understanding the protocol, take a look at [`docs/hex_quick_reference.md`](docs/hex_quick_reference.md)
+
 ---
 
 ## Intended Use
