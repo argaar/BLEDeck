@@ -1,12 +1,18 @@
 import json
+import logging
 import os
+from typing import Any, Dict, List
+
+logger = logging.getLogger(__name__)
 
 CONFIG_PATH = "profiles.json"
 
-def load_profiles():
+ProfileData = Dict[str, Any]
+
+
+def load_profiles() -> List[ProfileData]:
     if not os.path.exists(CONFIG_PATH):
-        # Create default profiles with some example keys
-        default_profiles = [
+        default_profiles: List[ProfileData] = [
             {
                 "name": "Default",
                 "keys": {
@@ -34,8 +40,7 @@ def load_profiles():
 
     try:
         with open(CONFIG_PATH, "r") as f:
-            profiles = json.load(f)
-            # Ensure each profile has required fields
+            profiles: List[ProfileData] = json.load(f)
             for profile in profiles:
                 if 'keys' not in profile:
                     profile['keys'] = {}
@@ -43,31 +48,21 @@ def load_profiles():
                     profile['name'] = "Unnamed Profile"
             return profiles
     except (json.JSONDecodeError, FileNotFoundError):
-        # Return default if file is corrupted
         return [{"name": "Default", "keys": {}}]
 
-def save_profiles(profiles):
+
+def save_profiles(profiles: List[ProfileData]) -> bool:
     try:
         with open(CONFIG_PATH, "w") as f:
             json.dump(profiles, f, indent=2)
         return True
     except Exception as e:
-        print(f"Error saving profiles: {e}")
+        logger.error("Error saving profiles: %s", e)
         return False
 
-def create_new_profile(name="New Profile"):
-    """Create a new empty profile"""
+
+def create_new_profile(name: str = "New Profile") -> ProfileData:
     return {
         "name": name,
         "keys": {}
     }
-
-def duplicate_profile(profile, new_name=None):
-    """Duplicate an existing profile"""
-    new_profile = profile.copy()
-    new_profile['keys'] = profile['keys'].copy()
-    if new_name:
-        new_profile['name'] = new_name
-    else:
-        new_profile['name'] = f"{profile['name']} (Copy)"
-    return new_profile

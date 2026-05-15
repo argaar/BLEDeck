@@ -42,9 +42,13 @@ BLEDeck/
 │       └── credentials.h       WiFi + OTA password (gitignored, see below)
 ├── windows_app/       PyQt5 desktop application
 │   ├── main.py                 BLEDeck GUI, BLE lifecycle, notification dispatch
+│   ├── key_button.py           KeyButton widget
 │   ├── ble_protocol.py         Packet builders, parsers, opcode constants
 │   ├── ble_client.py           BleakClient re-export + BLE UUIDs
-│   └── profile_manager.py      Load/save profiles.json
+│   ├── profile_manager.py      Load/save profiles.json
+│   └── tests/                  Pytest suite
+│       ├── test_ble_protocol.py
+│       └── test_profile_manager.py
 ├── pcb/               KiCad schematic + layout + Gerbers
 ├── docs/              Protocol reference and debugging guides
 │   ├── ble_protocol_reference.md
@@ -107,7 +111,7 @@ Full setup and usage details: [`windows_app/README.md`](windows_app/README.md)
 
 ```bash
 cd windows_app
-pip install -r requirements
+pip install -r requirements.txt
 python main.py
 ```
 
@@ -133,7 +137,7 @@ python protocol_decoder.py
 ```
 
 For advanced debugging see [`docs/protocol_debugging.md`](docs/protocol_debugging.md)
-In you're interested in understanding the protocol, take a look at [`docs/hex_quick_reference.md`](docs/hex_quick_reference.md)
+If you're interested in understanding the protocol, take a look at [`docs/hex_quick_reference.md`](docs/hex_quick_reference.md)
 
 ---
 
@@ -170,7 +174,7 @@ Current version: **v1.1**
 
 ---
 
-### STLs
+## STLs
 
 3D Models ready to be printed in PLA are available under `enclosure/stls` folder.
 

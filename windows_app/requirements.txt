@@ -2,3 +2,4 @@ bleak==2.0.0
 PyQt5==5.15.11
 qasync==0.28.0
 pynput==1.8.1
+pytest==9.0.3

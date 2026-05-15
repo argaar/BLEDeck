@@ -29,6 +29,12 @@ python main.py
 > python main.py
 > ```
 
+### Running Tests
+
+```bash
+python -m pytest tests/
+```
+
 ---
 
 ## Usage
@@ -74,9 +80,11 @@ Closing or minimising the window hides it to the system tray. Double-click or si
 | File | Purpose |
 |------|---------|
 | `main.py` | `BLEDeckGUI` - main window, BLE lifecycle, notification dispatch, command execution |
+| `key_button.py` | `KeyButton(QPushButton)` - individual key widget with color and label state |
 | `ble_protocol.py` | Packet builders, parsers, all opcode constants |
 | `ble_client.py` | BleakClient re-export and BLE characteristic UUIDs |
 | `profile_manager.py` | Load/save `profiles.json` |
+| `tests/` | Pytest suite - `test_ble_protocol.py`, `test_profile_manager.py` |
 | `profiles.json` | Auto-created on first run; stores all profiles and key configurations |
 
 ---

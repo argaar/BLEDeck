@@ -1,7 +1,12 @@
 import sys
 import asyncio
+import logging
+import subprocess
+import time
 import qasync
 import ctypes
+from typing import Any
+from bleak import BleakClient, BleakScanner
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
                              QWidget, QLabel, QPushButton, QLineEdit, QComboBox,
                              QGridLayout, QGroupBox, QStatusBar, QTextEdit,
@@ -10,135 +15,16 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QColor, QIcon
 
-from ble_client import BleakClient, DEVICE_NAME, CHAR_TX_UUID, CHAR_RX_UUID
-from profile_manager import load_profiles, save_profiles
+from ble_client import DEVICE_NAME, CHAR_TX_UUID, CHAR_RX_UUID
+from key_button import KeyButton
+from profile_manager import load_profiles, save_profiles, create_new_profile
 import ble_protocol
-import pynput
 
-class KeyButton(QPushButton):
-    def __init__(self, key_id, text):
-        super().__init__()
-        self.key_id = key_id
-        self.key_number = text
-        self.key_label = ""
-        self.key_color = None  # Store as (r, g, b, brightness)
-        self.setFixedSize(80, 80)
-        self.is_active = False
-        self.update_button_text()
-        self.update_button_style()
+logger = logging.getLogger(__name__)
 
-    def update_button_text(self):
-        """Update the button text to show key number and label"""
-        if self.key_label:
-            # Split long labels with spaces into two lines
-            if len(self.key_label) > 10 and ' ' in self.key_label:
-                # Find the best split point (closest to middle)
-                words = self.key_label.split(' ')
-                if len(words) >= 2:
-                    self.setText(f"{self.key_number}\n{'\n'.join(words)}")
-                else:
-                    self.setText(f"{self.key_number}\n{self.key_label}")
-            else:
-                self.setText(f"{self.key_number}\n{self.key_label}")
-        else:
-            self.setText(self.key_number)
-
-    def set_label(self, label):
-        """Set the label for this key"""
-        self.key_label = label
-        self.update_button_text()
-
-    def set_color(self, color_str):
-        """Set the color from a string like '220,0,0,70'"""
-        if color_str:
-            try:
-                parts = color_str.strip().split(',')
-                if len(parts) == 4:
-                    # Filter out empty strings and convert to int
-                    values = []
-                    for p in parts:
-                        p = p.strip()
-                        if p == '':
-                            # Empty value, use default 0
-                            values.append(0)
-                        else:
-                            values.append(int(p))
-                    r, g, b, brightness = values
-                    # Clamp values to valid ranges
-                    r = max(0, min(255, r))
-                    g = max(0, min(255, g))
-                    b = max(0, min(255, b))
-                    brightness = max(0, min(100, brightness))
-                    self.key_color = (r, g, b, brightness)
-                else:
-                    self.key_color = None
-            except (ValueError, AttributeError) as e:
-                print(f"Warning: Invalid color string '{color_str}': {e}")
-                self.key_color = None
-        else:
-            self.key_color = None
-        self.update_button_style()
-
-    def update_button_style(self):
-        """Update the button stylesheet based on color and active state"""
-        if self.is_active:
-            # Active state - use green
-            self.setStyleSheet("""
-                QPushButton {
-                    background-color: #4CAF50;
-                    border: 2px solid #45a049;
-                    border-radius: 5px;
-                    font-weight: bold;
-                    font-size: 9px;
-                    color: white;
-                }
-            """)
-        elif self.key_color:
-            # Use the custom color with brightness
-            r, g, b, bri = self.key_color
-            # Apply brightness (0-100) as a brightness factor
-            brightness = bri / 100.0
-            r_adj = int(r * brightness)
-            g_adj = int(g * brightness)
-            b_adj = int(b * brightness)
-
-            # Calculate text color based on brightness (dark text for light backgrounds)
-            text_color = "black" if (r_adj + g_adj + b_adj) > 382 else "white"
-
-            self.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: rgb({r_adj}, {g_adj}, {b_adj});
-                    border: 2px solid rgb({max(0, r_adj-20)}, {max(0, g_adj-20)}, {max(0, b_adj-20)});
-                    border-radius: 5px;
-                    font-weight: bold;
-                    font-size: 9px;
-                    color: {text_color};
-                }}
-                QPushButton:hover {{
-                    background-color: rgb({min(255, r_adj+20)}, {min(255, g_adj+20)}, {min(255, b_adj+20)});
-                }}
-            """)
-        else:
-            # Default gray style
-            self.setStyleSheet("""
-                QPushButton {
-                    background-color: #f0f0f0;
-                    border: 2px solid #ccc;
-                    border-radius: 5px;
-                    font-weight: bold;
-                    font-size: 9px;
-                }
-                QPushButton:hover {
-                    background-color: #e0e0e0;
-                }
-            """)
-
-    def set_active(self, active):
-        self.is_active = active
-        self.update_button_style()
 
 class BLEDeckGUI(QMainWindow):
-    def __init__(self, quit_event):
+    def __init__(self, quit_event: asyncio.Event) -> None:
         super().__init__()
         self.setWindowTitle("BLEDeck Control Panel")
         self.setGeometry(100, 100, 800, 600)
@@ -206,7 +92,7 @@ class BLEDeckGUI(QMainWindow):
 
         asyncio.create_task(self.connect())
     
-    def setup_ui(self):
+    def setup_ui(self) -> None:
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
@@ -228,10 +114,10 @@ class BLEDeckGUI(QMainWindow):
         self.setStatusBar(self.status_bar)
         self.status_bar.showMessage("Disconnected")
     
-    def create_top_panel(self):
+    def create_top_panel(self) -> QGroupBox:
         group = QGroupBox("Connection & Profile")
         layout = QHBoxLayout(group)
-        
+
         # Connection status
         self.status_label = QLabel("Status: Disconnected")
         layout.addWidget(self.status_label)
@@ -245,24 +131,24 @@ class BLEDeckGUI(QMainWindow):
         self.connect_btn = QPushButton("Connect")
         self.connect_btn.clicked.connect(self.toggle_connection)
         layout.addWidget(self.connect_btn)
-        
+
         # Auto-reconnect checkbox
         self.auto_reconnect_cb = QCheckBox("Auto-reconnect")
         self.auto_reconnect_cb.stateChanged.connect(self.toggle_auto_reconnect)
         layout.addWidget(self.auto_reconnect_cb)
-        
+
         # Profile selection
         layout.addWidget(QLabel("Profile:"))
         self.profile_combo = QComboBox()
         self.update_profile_combo()
         self.profile_combo.currentIndexChanged.connect(self.on_profile_changed)
         layout.addWidget(self.profile_combo)
-        
+
         # Profile name input
         self.profile_name_input = QLineEdit()
         self.profile_name_input.setPlaceholderText("Profile name...")
         layout.addWidget(self.profile_name_input)
-        
+
         # New profile button
         new_btn = QPushButton("New Profile")
         new_btn.clicked.connect(self.create_new_profile)
@@ -282,14 +168,13 @@ class BLEDeckGUI(QMainWindow):
 
         return group
     
-    def create_key_panel(self):
+    def create_key_panel(self) -> QGroupBox:
         group = QGroupBox("Key Layout")
         layout = QGridLayout(group)
-        
-        # Create 16 key buttons in a 4x4 grid
-        keys = ['0', '1', '2', '3', '4', '5', '6', '7', 
+
+        keys = ['0', '1', '2', '3', '4', '5', '6', '7',
                 '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
-        
+
         for i, key in enumerate(keys):
             row = i // 4
             col = i % 4
@@ -297,10 +182,10 @@ class BLEDeckGUI(QMainWindow):
             btn.clicked.connect(lambda checked, key_id=i: self.on_key_selected(key_id))
             self.key_buttons[i] = btn
             layout.addWidget(btn, row, col)
-        
+
         return group
     
-    def create_action_panel(self):
+    def create_action_panel(self) -> QGroupBox:
         group = QGroupBox("Action Configuration")
         layout = QVBoxLayout(group)
 
@@ -382,11 +267,11 @@ class BLEDeckGUI(QMainWindow):
 
         return group
     
-    def restore_from_tray(self):
+    def restore_from_tray(self) -> None:
         self.showNormal()
         self.activateWindow()
 
-    def on_tray_icon_activated(self, reason):
+    def on_tray_icon_activated(self, reason) -> None:
         """
         reason is an enum value. Different PyQt versions expose enums differently;
         check for DoubleClick first, otherwise fall back to Trigger (single click).
@@ -409,7 +294,7 @@ class BLEDeckGUI(QMainWindow):
             except Exception:
                 pass
 
-    def update_profile_combo(self):
+    def update_profile_combo(self) -> None:
         # Save current selection
         current_index = self.profile_combo.currentIndex()
 
@@ -429,13 +314,13 @@ class BLEDeckGUI(QMainWindow):
         # Unblock signals
         self.profile_combo.blockSignals(False)
     
-    def load_current_profile(self):
+    def load_current_profile(self) -> None:
         if self.current_profile_index < len(self.profiles):
             profile = self.profiles[self.current_profile_index]
             self.key_configs = profile.get('keys', {})
 
             # Convert string keys to int keys
-            if isinstance(list(self.key_configs.keys())[0] if self.key_configs else None, str):
+            if self.key_configs and isinstance(next(iter(self.key_configs.keys())), str):
                 self.key_configs = {int(k): v for k, v in self.key_configs.items()}
 
             # Update profile name input
@@ -451,14 +336,14 @@ class BLEDeckGUI(QMainWindow):
                 btn.set_label(key_data.get('label', ''))
                 btn.set_color(key_data.get('color', ''))
     
-    def on_profile_changed(self, index):
+    def on_profile_changed(self, index) -> None:
         self.current_profile_index = index
         self.load_current_profile()
         if self.is_connected:
             self.log(f"📁 Profile changed to: {self.profiles[index].get('name', f'Profile {index}')}")
             asyncio.create_task(self.send_profile_change())
     
-    def on_key_selected(self, key_id):
+    def on_key_selected(self, key_id) -> None:
         self.selected_key_id = key_id
         key_name = self.key_id_to_char(key_id)
         self.selected_key_label.setText(f"Selected Key: {key_name} (ID: {key_id})")
@@ -483,14 +368,14 @@ class BLEDeckGUI(QMainWindow):
             except AttributeError:
                 self.log(f"Color code: '{color_str}' is invalid")
 
-    def on_label_changed(self, text):
+    def on_label_changed(self, text) -> None:
         if self.selected_key_id is not None:
             self.ensure_key_data_exists()
             self.key_configs[self.selected_key_id]['label'] = text.strip()
             # Update button label
             self.key_buttons[self.selected_key_id].set_label(text.strip())
 
-    def on_color_changed(self, text):
+    def on_color_changed(self, text) -> None:
         if self.selected_key_id is not None:
             self.ensure_key_data_exists()
             self.key_configs[self.selected_key_id]['color'] = text.strip()
@@ -499,18 +384,18 @@ class BLEDeckGUI(QMainWindow):
             # Send notification to change single RGB on BLEDeck
             self.send_rgb(color=text.strip())
 
-    def on_command_changed(self, text):
+    def on_command_changed(self, text) -> None:
         if self.selected_key_id is not None:
             self.ensure_key_data_exists()
             self.key_configs[self.selected_key_id]['command'] = text.strip()
 
-    def ensure_key_data_exists(self):
+    def ensure_key_data_exists(self) -> None:
         """Ensure the selected key has a dictionary entry"""
         if self.selected_key_id is not None:
             if self.selected_key_id not in self.key_configs:
                 self.key_configs[self.selected_key_id] = {'label': '', 'color': '', 'command': ''}
 
-    def open_color_picker(self):
+    def open_color_picker(self) -> None:
         """Open color picker dialog"""
         if self.selected_key_id is None:
             QMessageBox.warning(self, "No Key Selected", "Please select a key first.")
@@ -541,7 +426,7 @@ class BLEDeckGUI(QMainWindow):
             color_string = f"{r},{g},{b},{brightness}"
             self.color_input.setText(color_string)
 
-    def on_brightness_changed(self, value):
+    def on_brightness_changed(self, value) -> None:
         """Handle brightness slider change"""
         self.brightness_label.setText(f"{value}%")
 
@@ -562,33 +447,10 @@ class BLEDeckGUI(QMainWindow):
                 except AttributeError:
                     self.log(f"Color code: {color_str}' is invalid")
     
-    def create_new_profile(self):
+    def create_new_profile(self) -> None:
         """Create a new empty profile"""
-        # Create a new profile with a default name
         profile_count = len(self.profiles) + 1
-        new_profile = {
-            "name": f"New Profile {profile_count}",
-            "keys": {
-                "0": {"label": "", "color": "", "command": ""},
-                "1": {"label": "", "color": "", "command": ""},
-                "2": {"label": "", "color": "", "command": ""},
-                "3": {"label": "", "color": "", "command": ""},
-                "4": {"label": "", "color": "", "command": ""},
-                "5": {"label": "", "color": "", "command": ""},
-                "6": {"label": "", "color": "", "command": ""},
-                "7": {"label": "", "color": "", "command": ""},
-                "8": {"label": "", "color": "", "command": ""},
-                "9": {"label": "", "color": "", "command": ""},
-                "10": {"label": "", "color": "", "command": ""},
-                "11": {"label": "", "color": "", "command": ""},
-                "12": {"label": "", "color": "", "command": ""},
-                "13": {"label": "", "color": "", "command": ""},
-                "14": {"label": "", "color": "", "command": ""},
-                "15": {"label": "", "color": "", "command": ""}
-            }
-        }
-
-        # Add to profiles list
+        new_profile = create_new_profile(f"New Profile {profile_count}")
         self.profiles.append(new_profile)
 
         # Switch to the new profile
@@ -616,7 +478,7 @@ class BLEDeckGUI(QMainWindow):
         self.log(f"Created new profile: {new_profile['name']}")
         self.log("Remember to save it before closing or switching profile")
 
-    def save_current_profile(self):
+    def save_current_profile(self) -> None:
         if self.current_profile_index < len(self.profiles):
             profile = self.profiles[self.current_profile_index]
         else:
@@ -645,12 +507,12 @@ class BLEDeckGUI(QMainWindow):
             self.log(f"📁 Profile name changed: '{old_name}' → '{new_name}'")
             asyncio.create_task(self.sync_single_profile(self.current_profile_index))
     
-    async def sync_single_profile(self, profile_index):
+    async def sync_single_profile(self, profile_index: int) -> None:
         """Sync a single profile name to the device - with binary protocol we sync all"""
         # With the binary protocol, we just resync all profiles
         await self.synchronize_profiles_to_device()
     
-    def sync_profile_from_device(self, device_profile_index):
+    def sync_profile_from_device(self, device_profile_index: int) -> None:
         """Update app profile to match device profile (called when device encoder changes profile)"""
         self.current_profile_index = device_profile_index
         
@@ -674,30 +536,16 @@ class BLEDeckGUI(QMainWindow):
         # Send back the colors
         self.send_rgb()
     
-    def parse_color_string(self, color_str):
+    def parse_color_string(self, color_str: str) -> ble_protocol.RGBW:
         """Parse color string 'R,G,B,W' into tuple (r, g, b, w)"""
-        try:
-            parts = color_str.strip().split(',')
-            if len(parts) == 4:
-                values = []
-                for p in parts:
-                    p = p.strip()
-                    if p == '':
-                        values.append(0)
-                    else:
-                        values.append(int(p))
-                r, g, b, w = values
-                # Clamp values
-                r = max(0, min(255, r))
-                g = max(0, min(255, g))
-                b = max(0, min(255, b))
-                w = max(0, min(100, w))
-                return (r, g, b, w)
-        except (ValueError, AttributeError) as e:
-            self.log(f"⚠️ Error parsing color '{color_str}': {e}")
-        return (0, 0, 0, 0)
+        result = ble_protocol.parse_color_string(color_str)
+        if result is None:
+            if color_str:
+                self.log(f"⚠️ Error parsing color '{color_str}'")
+            return (0, 0, 0, 0)
+        return result
 
-    def send_rgb(self, color=None):
+    def send_rgb(self, color: str | None = None) -> None:
         """Send RGB color(s) to device using binary protocol"""
         if color:
             r, g, b, w = self.parse_color_string(color)
@@ -718,7 +566,7 @@ class BLEDeckGUI(QMainWindow):
             packet = ble_protocol.set_all_rgb_keys(rgbw_list)
         asyncio.create_task(self.send_ble(packet))
 
-    def delete_current_profile(self):
+    def delete_current_profile(self) -> None:
         if len(self.profiles) <= 1:
             QMessageBox.warning(self, "Cannot Delete", "Cannot delete the last profile. At least one profile must exist.")
             return
@@ -749,7 +597,7 @@ class BLEDeckGUI(QMainWindow):
                 # Update current profile on device
                 asyncio.create_task(self.send_profile_change())
     
-    def browse_for_executable(self):
+    def browse_for_executable(self) -> None:
         file_dialog = QFileDialog()
         file_path, _ = file_dialog.getOpenFileName(
             self,
@@ -764,7 +612,7 @@ class BLEDeckGUI(QMainWindow):
                 file_path = f'"{file_path}"'
             self.command_input.setText(file_path)
     
-    def toggle_connection(self):
+    def toggle_connection(self) -> None:
         if self.is_connected:
             self.log("🔌 Manual disconnect requested")
             asyncio.create_task(self.manual_disconnect())
@@ -772,7 +620,7 @@ class BLEDeckGUI(QMainWindow):
             self.log("🔌 Manual connect requested") 
             asyncio.create_task(self.connect())
     
-    async def manual_disconnect(self):
+    async def manual_disconnect(self) -> None:
         # Stop auto-connect when manually disconnecting
         self.connect_timer.stop()
         await self.disconnect()
@@ -780,7 +628,7 @@ class BLEDeckGUI(QMainWindow):
         if self.auto_reconnect_cb.isChecked():
             QTimer.singleShot(30000, self.connect_timer.start)  # 30 second delay
     
-    def toggle_auto_reconnect(self, checked):
+    def toggle_auto_reconnect(self, checked) -> None:
         if checked:
             self.log("🔄 Auto-reconnect enabled")
             if not self.is_connected:
@@ -789,9 +637,8 @@ class BLEDeckGUI(QMainWindow):
             self.log("🔄 Auto-reconnect disabled")
             self.connect_timer.stop()
     
-    async def connect(self):
+    async def connect(self) -> None:
         try:
-            from bleak import BleakScanner
             self.log("Scanning for BLEDeck...")
             
             # Scan with timeout
@@ -832,7 +679,6 @@ class BLEDeckGUI(QMainWindow):
             self.status_bar.showMessage(f"Connected to {target.address}")
             
             # Reset connection health tracking
-            import time
             self.last_ping_response = time.time()
             self.ping_timeout_count = 0
             
@@ -856,13 +702,13 @@ class BLEDeckGUI(QMainWindow):
             self.log(f"❌ Connection failed: {str(e)}")
             await self.cleanup_failed_connection()
     
-    async def cleanup_failed_connection(self):
+    async def cleanup_failed_connection(self) -> None:
         self.is_connected = False
         if self.ble_client:
             await self.ble_client.disconnect()
         self.ble_client = None
     
-    async def disconnect(self): # pyright: ignore[reportIncompatibleMethodOverride]
+    async def disconnect(self) -> None: # pyright: ignore[reportIncompatibleMethodOverride]
         # Prevent multiple simultaneous disconnects
         if not self.is_connected:
             return
@@ -902,7 +748,7 @@ class BLEDeckGUI(QMainWindow):
         
         self.log("✅ Disconnected")
     
-    async def send_ble(self, data):
+    async def send_ble(self, data: bytes | str) -> None:
         """Send binary data to BLE device"""
         if not self.ble_client or not self.is_connected:
             return
@@ -951,7 +797,7 @@ class BLEDeckGUI(QMainWindow):
             else:
                 self.log(f"⚠️ Send failed: {str(e)} (keeping connection)")
     
-    async def synchronize_profiles_to_device(self):
+    async def synchronize_profiles_to_device(self) -> None:
         """Send all profile names to the device using binary protocol"""
         self.log(f"📁 Synchronizing {len(self.profiles)} profiles to device...")
 
@@ -968,7 +814,7 @@ class BLEDeckGUI(QMainWindow):
 
         self.log("📁 Profile synchronization complete")
     
-    async def send_profile_change(self):
+    async def send_profile_change(self) -> None:
         """Send complete profile data to device when app changes profiles"""
         profile = self.profiles[self.current_profile_index]
         profile_name = profile.get('name', f'Profile {self.current_profile_index}')
@@ -995,18 +841,17 @@ class BLEDeckGUI(QMainWindow):
         )
         await self.send_ble(rgb_packet)
 
-    def send_ping(self):
+    def send_ping(self) -> None:
         if self.is_connected:
-            import time
             self.log(f"🏓 Sending ping (last response: {int(time.time() - self.last_ping_response)}s ago)")
             packet = ble_protocol.keep_alive()
             asyncio.create_task(self.send_ble(packet))
     
-    def auto_connect(self):
+    def auto_connect(self) -> None:
         if not self.is_connected:
             asyncio.create_task(self.connect())
     
-    async def handle_notification(self, sender, data):
+    async def handle_notification(self, sender: Any, data: bytes) -> None:
         """Handle incoming binary protocol packets from device"""
         try:
             # Check if we're still connected
@@ -1014,7 +859,6 @@ class BLEDeckGUI(QMainWindow):
                 return
 
             # Any message is a sign of life - update connection health
-            import time
             self.last_ping_response = time.time()
             self.ping_timeout_count = 0
 
@@ -1086,10 +930,10 @@ class BLEDeckGUI(QMainWindow):
             else:
                 self.log(f"⚠️ Unknown opcode: 0x{opcode:02X}")
 
-        except Exception as e:
-            self.log(f"❌ Notification error: {str(e)}")
+        except Exception:
+            logger.exception("❌ Notification handler error")
     
-    async def execute_key_action_for_profile(self, key_id, profile_index):
+    async def execute_key_action_for_profile(self, key_id: int, profile_index: int) -> None:
         """Execute action for a specific profile"""
         if profile_index is None or profile_index >= len(self.profiles):
             self.log(f"⚠️ Invalid profile index: {profile_index}")
@@ -1099,7 +943,7 @@ class BLEDeckGUI(QMainWindow):
         profile_keys = profile.get('keys', {})
 
         # Convert string keys to int if needed
-        if isinstance(list(profile_keys.keys())[0] if profile_keys else None, str):
+        if profile_keys and isinstance(next(iter(profile_keys.keys())), str):
             profile_keys = {int(k): v for k, v in profile_keys.items()}
 
         key_data = profile_keys.get(key_id)
@@ -1111,7 +955,6 @@ class BLEDeckGUI(QMainWindow):
                 command = key_data.get('command', '')
 
                 if command:
-                    import subprocess
                     # Execute the command with error capture
                     # Use CREATE_NO_WINDOW flag on Windows to prevent console windows
                     startupinfo = None
@@ -1139,7 +982,7 @@ class BLEDeckGUI(QMainWindow):
         else:
             self.log(f"⚠️ No action defined for key {key_id} in profile '{profile_name}'")
 
-    async def _check_command_errors(self, process, command, profile_name):
+    async def _check_command_errors(self, process: Any, command: str, profile_name: str) -> None:
         """Check if a command produced errors"""
         try:
             # Wait for the process to complete (with timeout)
@@ -1165,7 +1008,7 @@ class BLEDeckGUI(QMainWindow):
         except Exception as e:
             self.log(f"⚠️ Error checking command status: {str(e)}")
     
-    def char_to_key_id(self, key_char):
+    def char_to_key_id(self, key_char: str) -> int | None:
         """Convert key character to key ID (0-15)"""
         # Key mapping: 0-9 = IDs 0-9, A-F = IDs 10-15
         key_mapping = {
@@ -1174,7 +1017,7 @@ class BLEDeckGUI(QMainWindow):
         }
         return key_mapping.get(key_char)
     
-    def key_id_to_char(self, key_id):
+    def key_id_to_char(self, key_id: int) -> str | None:
         """Convert key ID to character"""
         if 0 <= key_id <= 9:
             return str(key_id)
@@ -1182,19 +1025,19 @@ class BLEDeckGUI(QMainWindow):
             return chr(ord('A') + key_id - 10)  # 10->A, 11->B, etc.
         return None
     
-    def update_battery_display(self, percent: int):
+    def update_battery_display(self, percent: int) -> None:
         if percent == 255:
             self.battery_label.setText("USB")
         else:
             self.battery_label.setText(f"Bat: {percent}%")
 
-    def log(self, message):
+    def log(self, message: str) -> None:
         self.log_text.append(message)
         # Auto-scroll to bottom
         scrollbar = self.log_text.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum()) # pyright: ignore[reportOptionalMemberAccess]
     
-    def screen_locked(self):
+    def screen_locked(self) -> None:
         """
         Find if the user has locked their screen.
         """
@@ -1202,7 +1045,7 @@ class BLEDeckGUI(QMainWindow):
             user32 = ctypes.windll.User32
             # Detect if the workstation is locked (Windows)          
             # If the foreground window is 0, the screen is locked
-            is_locked = user32.GetForegroundWindow() % 10 == 0
+            is_locked = user32.GetForegroundWindow() == 0
             
             if is_locked:
                 packet = ble_protocol.lock_device(True)
@@ -1234,7 +1077,7 @@ class BLEDeckGUI(QMainWindow):
 
     def closeEvent(self, event): # pyright: ignore[reportIncompatibleMethodOverride]
         """Handle window close event"""
-        print("Application closing...")
+        logger.info("Application closing...")
 
         # Stop timers first
         if hasattr(self, 'ping_timer'):
@@ -1242,7 +1085,7 @@ class BLEDeckGUI(QMainWindow):
         if hasattr(self, 'connect_timer'):
             self.connect_timer.stop()
         if hasattr(self, 'device_lock_timer'):
-            self.connect_timer.stop()
+            self.device_lock_timer.stop()
 
         # Properly disconnect from device if connected
         if self.is_connected and self.ble_client:
@@ -1257,8 +1100,8 @@ class BLEDeckGUI(QMainWindow):
 
                     def check_disconnect():
                         if disconnect_task.done():
-                            print("BLE disconnect completed")
-                            print("Application closed gracefully")
+                            logger.info("BLE disconnect completed")
+                            logger.info("Application closed gracefully")
                             # Signal the quit event to terminate the event loop
                             self.quit_event.set()
                             QApplication.quit()
@@ -1271,21 +1114,21 @@ class BLEDeckGUI(QMainWindow):
 
                 except RuntimeError:
                     # No event loop running, force cleanup
-                    print("No event loop - forcing cleanup")
+                    logger.info("No event loop - forcing cleanup")
                     self.is_connected = False
                     self.ble_client = None
             except Exception as e:
-                print(f"Error during disconnect: {e}")
+                logger.exception("Error during disconnect")
                 self.is_connected = False
                 self.ble_client = None
 
-        print("Application closed gracefully")
+        logger.info("Application closed gracefully")
         # Signal the quit event to terminate the event loop
         self.quit_event.set()
         QApplication.quit()
         event.accept()
 
-async def main():
+async def main() -> None:
     app = QApplication(sys.argv)
     app.setApplicationName("BLEDeck")
     app.setApplicationDisplayName("BLEDeck")
@@ -1305,8 +1148,8 @@ if __name__ == "__main__":
     try:
         qasync.run(main())
     except KeyboardInterrupt:
-        print("Application interrupted")
+        logger.info("Application interrupted")
     except Exception as e:
-        print(f"Application error: {e}")
+        logger.exception("Application error: %s", e)
     finally:
-        print("Application terminated")
+        logger.info("Application terminated")

@@ -23,6 +23,7 @@ Device → PC (events)
 """
 
 import struct
+from typing import Dict, Tuple
 
 START_BYTE = 0xAA
 
@@ -41,14 +42,17 @@ OP_BUTTON_PRESSED    = 0x83
 OP_KEY_PRESSED       = 0x84
 OP_BATTERY_STATUS    = 0x85
 
+RGBW = Tuple[int, int, int, int]
+
+
 class BLEPacket:
     @staticmethod
-    def build(opcode, payload=b''):
+    def build(opcode: int, payload: bytes = b'') -> bytes:
         length = len(payload)
         return struct.pack(">BBH", START_BYTE, opcode, length) + payload
 
     @staticmethod
-    def parse(raw):
+    def parse(raw: bytes) -> Tuple[int, bytes]:
         if len(raw) < 4:
             raise ValueError("Invalid packet, too short")
 
@@ -59,27 +63,27 @@ class BLEPacket:
         payload = raw[4:4+length]
         return opcode, payload
 
+
 # ----------------------------
 # Packet builders
 # ----------------------------
-def keep_alive():
+def keep_alive() -> bytes:
     return BLEPacket.build(OP_KEEP_ALIVE)
 
-def lock_device(lock: bool):
+
+def lock_device(lock: bool) -> bytes:
     payload = struct.pack("B", 1 if lock else 0)
     return BLEPacket.build(OP_LOCK_DEVICE, payload)
 
-def change_profile(index, name):
-    # index: 1B
-    # name: len + bytes
-    # keys: 16 * 4 bytes RGBW
+
+def change_profile(index: int, name: str) -> bytes:
     name_bytes = name.encode("utf-8")
     payload = struct.pack("BB", index, len(name_bytes))
     payload += name_bytes
     return BLEPacket.build(OP_CHANGE_PROFILE, payload)
 
-def sync_profiles(profiles_dict):
-    # dict: {index: name}
+
+def sync_profiles(profiles_dict: Dict[int, str]) -> bytes:
     payload = struct.pack("B", len(profiles_dict))
     for idx, name in profiles_dict.items():
         name_bytes = name.encode("utf-8")
@@ -87,15 +91,13 @@ def sync_profiles(profiles_dict):
         payload += name_bytes
     return BLEPacket.build(OP_SYNC_PROFILES, payload)
 
-def set_rgb_key(key_idx, r, g, b, w):
+
+def set_rgb_key(key_idx: int, r: int, g: int, b: int, w: int) -> bytes:
     payload = struct.pack("BBBBB", key_idx, r, g, b, w)
     return BLEPacket.build(OP_SET_RGB_KEY, payload)
 
-def set_all_rgb_keys(rgbw_list):
-    """
-    Set all 16 RGB keys at once
-    rgbw_list: list of 16 tuples (r, g, b, w)
-    """
+
+def set_all_rgb_keys(rgbw_list: list[RGBW]) -> bytes:
     if len(rgbw_list) != 16:
         raise ValueError("Must provide exactly 16 RGBW tuples")
 
@@ -105,75 +107,49 @@ def set_all_rgb_keys(rgbw_list):
 
     return BLEPacket.build(OP_SET_ALL_RGB_KEYS, payload)
 
+
 # ----------------------------
 # Parsing helpers
 # ----------------------------
+def parse_color_string(color_str: str) -> RGBW | None:
+    """Parse 'R,G,B,W' string into (r, g, b, w) tuple. Return None on failure."""
+    if not color_str:
+        return None
+    try:
+        parts = color_str.strip().split(',')
+        if len(parts) != 4:
+            return None
+        values = []
+        for p in parts:
+            p = p.strip()
+            values.append(0 if p == '' else int(p))
+        r, g, b, w = values
+        return (
+            max(0, min(255, r)),
+            max(0, min(255, g)),
+            max(0, min(255, b)),
+            max(0, min(100, w)),
+        )
+    except (ValueError, AttributeError):
+        return None
 
-def parse_change_profile(payload):
-    index = payload[0]
-    name_len = payload[1]
-    name = payload[2:2 + name_len].decode("utf-8")
 
-    offset = 2 + name_len
-    keys = []
-    for i in range(16):
-        r, g, b, w = struct.unpack("BBBB", payload[offset:offset+4])
-        keys.append((r, g, b, w))
-        offset += 4
-
-    return index, name, keys
-
-def parse_sync_profiles(payload):
-    count = payload[0]
-    profiles = {}
-    offset = 1
-    for _ in range(count):
-        idx = payload[offset]
-        offset += 1
-        name_len = payload[offset]
-        offset += 1
-        name = payload[offset:offset+name_len].decode("utf-8")
-        offset += name_len
-        profiles[idx] = name
-    return profiles
-
-def parse_set_rgb_key(payload):
-    """
-    Parse rgb color for a specific key
-    Returns key with color
-    """
-    key_idx, r, g, b, w = struct.unpack("BBBBB", payload)
-    return key_idx, (r, g, b, w)
-
-def parse_profile_changed(payload):
-    """
-    Parse profile changed event
-    Returns: profile index
-    """
+def parse_profile_changed(payload: bytes) -> int:
     return payload[0]
 
-def parse_button_pressed(payload):
-    """
-    Parse button pressed event
-    Returns: (profile_index, button_name)
-    """
+
+def parse_button_pressed(payload: bytes) -> Tuple[int, str]:
     profile_idx = payload[0]
     name_len = payload[1]
     button_name = payload[2:2 + name_len].decode("utf-8")
     return profile_idx, button_name
 
-def parse_key_pressed(payload):
-    """
-    Parse key pressed event
-    Returns: (profile_index, key_char)
-    """
+
+def parse_key_pressed(payload: bytes) -> Tuple[int, str]:
     profile_idx = payload[0]
     key_char = chr(payload[1])
     return profile_idx, key_char
 
-def parse_battery_status(payload) -> int:
-    """
-    Parse battery status event.
-    Returns battery percentage (0-100), or 255 if no battery / USB-only.
-    """
+
+def parse_battery_status(payload: bytes) -> int:
     return payload[0]
