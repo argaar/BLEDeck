@@ -37,6 +37,39 @@ python -m pytest tests/
 
 ---
 
+## Building a Standalone Executable
+
+Produces a self-contained `dist\BLEDeck\` folder that runs on any Windows 10/11 machine without Python or a virtualenv.
+
+```bash
+cd windows_app
+pip install -r requirements-build.txt   # installs PyInstaller
+build.bat
+```
+
+Output:
+
+```
+dist\BLEDeck\
+├── BLEDeck.exe      ← launch this
+├── icon.ico
+├── PyQt5\
+├── _internal\       ← bundled Python runtime + dependencies
+└── ...
+```
+
+Move the entire `dist\BLEDeck\` folder anywhere and run `BLEDeck.exe`. `profiles.json` is created in the same folder on first run.
+
+| File | Purpose |
+|------|---------|
+| `bledeck.spec` | PyInstaller spec — controls what gets bundled and how |
+| `build.bat` | One-click build script; cleans previous output before building |
+| `requirements-build.txt` | Build-time dependency (`pyinstaller>=6.0`; not needed at runtime) |
+
+> **Note:** `build/` and `dist/` are gitignored. Only commit `bledeck.spec` and `build.bat`.
+
+---
+
 ## Usage
 
 ### Connecting

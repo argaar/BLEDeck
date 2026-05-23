@@ -3,3 +3,6 @@ __pycache__
 .pytest_cache
 env
 profiles.json
+build/
+dist/
+*.spec.bak
