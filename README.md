@@ -46,9 +46,17 @@ BLEDeck/
 │   ├── ble_protocol.py         Packet builders, parsers, opcode constants
 │   ├── ble_client.py           BleakClient re-export + BLE UUIDs
 │   ├── profile_manager.py      Load/save profiles.json
-│   └── tests/                  Pytest suite
+│   ├── action_runner.py        Command/macro dispatch with re-entrancy guard
+│   ├── macro_models.py         Immutable step types + JSON serialization
+│   ├── macro_recorder.py       pynput-based recorder with window anchor detection
+│   ├── macro_player.py         Synchronous macro playback
+│   ├── macro_dialog.py         MacroDialog QDialog (record, edit, reorder, test)
+│   ├── win32_utils.py          Windows API helpers (window/monitor detection)
+│   └── tests/                  Pytest suite (111 tests)
 │       ├── test_ble_protocol.py
-│       └── test_profile_manager.py
+│       ├── test_profile_manager.py
+│       ├── test_action_runner.py
+│       └── test_macro_models.py
 ├── pcb/               KiCad schematic + layout + Gerbers
 ├── docs/              Protocol reference and debugging guides
 │   ├── ble_protocol_reference.md
@@ -100,7 +108,12 @@ Full setup and usage details: [`windows_app/README.md`](windows_app/README.md)
 ### Features
 
 - Scan and connect to BLEDeck over BLE (auto-reconnect optional)
-- **Per-key configuration** - label, RGBW color (with color picker + brightness slider), shell command
+- **Per-key configuration** - label, RGBW color (with color picker + brightness slider), action
+- **Two action types per key** - shell command (via `subprocess`) or recorded macro
+- **Macro recorder** - capture mouse clicks and keystrokes; replay them on key press
+  - Per-click window/monitor-relative coordinates: clicks are anchored to the window or monitor they were recorded on, so playback works even if windows have moved
+  - Multi-monitor support: monitors indexed by left edge (0 = leftmost)
+  - Edit individual steps, drag-to-reorder, delete steps, test-run from the dialog
 - **Profile management** - create, rename, save, and delete profiles; stored in `profiles.json`
 - **Live RGB sync** - changing a key color sends the update to the device immediately
 - **Battery indicator** - displays the battery percentage reported by the device
@@ -157,12 +170,12 @@ The rotary encoder switches between profiles. The three encoder-side buttons (CO
 
 ## Limitations
 
-- **Windows only** - the desktop app uses PyQt5 and bleak; no macOS or Linux app exists yet
+- **Windows only** - the desktop app uses PyQt5, bleak, and ctypes Win32 APIs; no macOS or Linux app exists yet
 - **App required** - the device does not persist colors or profile names; it resets to defaults when the app disconnects. This is intentional
-- **Shell commands only** - keys execute shell commands via `subprocess`; native keyboard injection (e.g. sending Ctrl+C as a keypress) is not implemented
 - **10 profiles max, 16 keys per profile**
 - **BLE range** - approximately 10 m in open space; walls reduce this
 - **Battery gauge accuracy** - ±5%, based on a two-resistor voltage divider and a 5-sample average; calibrated for 1S LiPo (3.2 V – 4.2 V)
+- **Macro recorder captures press events only** - release timing and mouse movement paths are not recorded
 
 ---
 

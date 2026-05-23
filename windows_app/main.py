@@ -1,17 +1,15 @@
 import sys
 import asyncio
 import logging
-import subprocess
 import time
 import qasync
 import ctypes
-from typing import Any
 from bleak import BleakClient, BleakGATTCharacteristic, BleakScanner
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
                              QWidget, QLabel, QPushButton, QLineEdit, QComboBox,
                              QGridLayout, QGroupBox, QStatusBar, QTextEdit,
                              QFileDialog, QMessageBox, QCheckBox, QColorDialog,
-                             QSlider, QSystemTrayIcon, QMenu, QAction)
+                             QDialog, QSlider, QSystemTrayIcon, QMenu, QAction)
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QColor, QIcon
 
@@ -19,6 +17,8 @@ from ble_client import DEVICE_NAME, CHAR_TX_UUID, CHAR_RX_UUID
 from key_button import KeyButton
 from profile_manager import load_profiles, save_profiles, create_new_profile
 import ble_protocol
+from action_runner import ActionRunner
+from macro_models import macro_from_list, macro_to_list
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,9 @@ class BLEDeckGUI(QMainWindow):
         self.last_ping_response = time.time()
 
         asyncio.create_task(self.connect())
-    
+
+        self._action_runner = ActionRunner()
+
     def setup_ui(self) -> None:
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -209,19 +211,16 @@ class BLEDeckGUI(QMainWindow):
         self.color_input.setPlaceholderText("e.g., 220,0,0,70")
         self.color_input.textChanged.connect(self.on_color_changed)
         color_layout.addWidget(self.color_input)
-
-        # Color picker button
         self.color_picker_btn = QPushButton("Pick Color")
         self.color_picker_btn.clicked.connect(self.open_color_picker)
         self.color_picker_btn.setMaximumWidth(100)
         color_layout.addWidget(self.color_picker_btn)
-
         layout.addLayout(color_layout)
 
-        # brightness slider
+        # Brightness slider
         bri_layout = QHBoxLayout()
         bri_layout.addWidget(QLabel("Brightness:"))
-        self.brightness_slider = QSlider(Qt.Horizontal) # pyright: ignore[reportAttributeAccessIssue]
+        self.brightness_slider = QSlider(Qt.Horizontal)  # pyright: ignore[reportAttributeAccessIssue]
         self.brightness_slider.setMinimum(0)
         self.brightness_slider.setMaximum(100)
         self.brightness_slider.setValue(70)
@@ -229,33 +228,53 @@ class BLEDeckGUI(QMainWindow):
         self.brightness_slider.setTickInterval(10)
         self.brightness_slider.valueChanged.connect(self.on_brightness_changed)
         bri_layout.addWidget(self.brightness_slider)
-
         self.brightness_label = QLabel("70%")
         self.brightness_label.setMinimumWidth(40)
         bri_layout.addWidget(self.brightness_label)
-
         layout.addLayout(bri_layout)
 
-        # Command input
+        # Action type selector
+        action_type_layout = QHBoxLayout()
+        action_type_layout.addWidget(QLabel("Action:"))
+        self.action_type_combo = QComboBox()
+        self.action_type_combo.addItems(["Command", "Macro"])
+        self.action_type_combo.currentIndexChanged.connect(self.on_action_type_changed)
+        action_type_layout.addWidget(self.action_type_combo)
+        action_type_layout.addStretch()
+        layout.addLayout(action_type_layout)
+
+        # Command row (visible for Command action type)
+        self._command_row = QWidget()
+        command_v = QVBoxLayout(self._command_row)
+        command_v.setContentsMargins(0, 0, 0, 0)
         command_layout = QHBoxLayout()
         command_layout.addWidget(QLabel("Command:"))
         self.command_input = QLineEdit()
         self.command_input.setPlaceholderText("Enter command or action...")
         self.command_input.textChanged.connect(self.on_command_changed)
         command_layout.addWidget(self.command_input)
-
-        # Browse button for executables
         browse_btn = QPushButton("Browse...")
         browse_btn.clicked.connect(self.browse_for_executable)
         browse_btn.setMaximumWidth(80)
         command_layout.addWidget(browse_btn)
-
-        layout.addLayout(command_layout)
-
-        # Command examples
+        command_v.addLayout(command_layout)
         examples = QLabel("Examples: notepad.exe, calc.exe, explorer.exe, cmd /c echo Hello")
         examples.setStyleSheet("color: gray; font-style: italic;")
-        layout.addWidget(examples)
+        command_v.addWidget(examples)
+        layout.addWidget(self._command_row)
+
+        # Macro row (visible for Macro action type)
+        self._macro_row = QWidget()
+        macro_h = QHBoxLayout(self._macro_row)
+        macro_h.setContentsMargins(0, 0, 0, 0)
+        self.macro_summary_label = QLabel("No steps recorded")
+        self.macro_summary_label.setStyleSheet("color: gray;")
+        macro_h.addWidget(self.macro_summary_label)
+        self.edit_macro_btn = QPushButton("Edit Macro...")
+        self.edit_macro_btn.clicked.connect(self.open_macro_dialog)
+        macro_h.addWidget(self.edit_macro_btn)
+        self._macro_row.setVisible(False)
+        layout.addWidget(self._macro_row)
 
         # Debug log
         self.log_text = QTextEdit()
@@ -266,6 +285,38 @@ class BLEDeckGUI(QMainWindow):
         self.selected_key_id = None
 
         return group
+
+    def on_action_type_changed(self, index: int) -> None:
+        is_macro = index == 1
+        self._command_row.setVisible(not is_macro)
+        self._macro_row.setVisible(is_macro)
+        if self.selected_key_id is not None:
+            self.ensure_key_data_exists()
+            self.key_configs[self.selected_key_id]['action_type'] = "macro" if is_macro else "command"
+
+    def open_macro_dialog(self) -> None:
+        if self.selected_key_id is None:
+            QMessageBox.warning(self, "No Key Selected", "Please select a key first.")
+            return
+        from macro_dialog import MacroDialog
+        key_data = self.key_configs.get(self.selected_key_id, {})
+        existing_steps = macro_from_list(key_data.get('macro', []))
+        key_label = self.key_id_to_char(self.selected_key_id) or str(self.selected_key_id)
+        dialog = MacroDialog(key_label, existing_steps, parent=self)
+        if dialog.exec_() == QDialog.Accepted:
+            steps = dialog.get_steps()
+            self.ensure_key_data_exists()
+            self.key_configs[self.selected_key_id]['macro'] = macro_to_list(steps)
+            self._update_macro_summary(len(steps))
+
+    def _update_macro_summary(self, step_count: int) -> None:
+        if step_count == 0:
+            self.macro_summary_label.setText("No steps recorded")
+            self.macro_summary_label.setStyleSheet("color: gray;")
+        else:
+            label = f"{step_count} step{'s' if step_count != 1 else ''}"
+            self.macro_summary_label.setText(label)
+            self.macro_summary_label.setStyleSheet("color: green;")
     
     def restore_from_tray(self) -> None:
         self.already_minimized = False
@@ -347,6 +398,15 @@ class BLEDeckGUI(QMainWindow):
         self.label_input.setText(key_data.get('label', ''))
         self.color_input.setText(key_data.get('color', ''))
         self.command_input.setText(key_data.get('command', ''))
+
+        # Load action type
+        action_type = key_data.get('action_type', 'command')
+        self.action_type_combo.blockSignals(True)
+        self.action_type_combo.setCurrentIndex(1 if action_type == 'macro' else 0)
+        self.action_type_combo.blockSignals(False)
+        self._command_row.setVisible(action_type != 'macro')
+        self._macro_row.setVisible(action_type == 'macro')
+        self._update_macro_summary(len(macro_from_list(key_data.get('macro', []))))
 
         # Update brightness slider
         color_str = key_data.get('color', '')
@@ -486,8 +546,9 @@ class BLEDeckGUI(QMainWindow):
         # Convert int keys to string keys for JSON serialization, filtering out empty keys
         filtered_keys = {}
         for k, v in self.key_configs.items():
-            # Only save if at least command is not empty
-            if v.get('command', '').strip():
+            has_command = bool(v.get('command', '').strip())
+            has_macro = v.get('action_type') == 'macro' and bool(v.get('macro'))
+            if has_command or has_macro:
                 filtered_keys[str(k)] = v
 
         profile['keys'] = filtered_keys
@@ -939,7 +1000,7 @@ class BLEDeckGUI(QMainWindow):
             logger.exception("❌ Notification handler error")
     
     async def execute_key_action_for_profile(self, key_id: int, profile_index: int) -> None:
-        """Execute action for a specific profile"""
+        """Execute action for a specific profile."""
         if profile_index is None or profile_index >= len(self.profiles):
             self.log(f"⚠️ Invalid profile index: {profile_index}")
             return
@@ -947,7 +1008,6 @@ class BLEDeckGUI(QMainWindow):
         profile = self.profiles[profile_index]
         profile_keys = profile.get('keys', {})
 
-        # Convert string keys to int if needed
         if profile_keys and isinstance(next(iter(profile_keys.keys())), str):
             profile_keys = {int(k): v for k, v in profile_keys.items()}
 
@@ -955,63 +1015,13 @@ class BLEDeckGUI(QMainWindow):
         profile_name = profile.get('name', f'Profile {profile_index}')
 
         if key_data:
-            try:
-                # Extract command from the key data
-                command = key_data.get('command', '')
-
-                if command:
-                    # Execute the command with error capture
-                    # Use CREATE_NO_WINDOW flag on Windows to prevent console windows
-                    startupinfo = None
-                    if sys.platform == 'win32':
-                        startupinfo = subprocess.STARTUPINFO()
-                        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-
-                    process = subprocess.Popen(
-                        command,
-                        shell=True,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        startupinfo=startupinfo,
-                        text=True
-                    )
-
-                    self.log(f"⚡ Executed from '{profile_name}': {command}")
-
-                    # Check for errors in a background task
-                    asyncio.create_task(self._check_command_errors(process, command, profile_name))
-                else:
-                    self.log(f"⚠️ No command defined for key {key_id} in profile '{profile_name}'")
-            except Exception as e:
-                self.log(f"❌ Action failed from '{profile_name}': {str(e)}")
+            self.log(f"⚡ Key {key_id} in '{profile_name}'")
+            # log_fn may be called from a worker thread — proxy to main thread
+            def thread_safe_log(msg: str) -> None:
+                QTimer.singleShot(0, lambda: self.log(msg))
+            self._action_runner.run(key_data, key_id, profile_index, thread_safe_log)
         else:
             self.log(f"⚠️ No action defined for key {key_id} in profile '{profile_name}'")
-
-    async def _check_command_errors(self, process: Any, command: str, profile_name: str) -> None:
-        """Check if a command produced errors"""
-        try:
-            # Wait for the process to complete (with timeout)
-            stdout, stderr = await asyncio.wait_for(
-                asyncio.to_thread(process.communicate),
-                timeout=5.0
-            )
-
-            # Check return code and stderr
-            if process.returncode != 0 and stderr:
-                # Extract meaningful error message
-                error_lines = stderr.strip().split('\n')
-                # Get the most relevant error line (usually the last non-empty one)
-                error_msg = next((line for line in reversed(error_lines) if line.strip()), stderr.strip())
-                self.log(f"❌ Command error from '{profile_name}': {error_msg}")
-                self.log(f"   Command: {command}")
-            elif process.returncode != 0:
-                self.log(f"⚠️ Command exited with code {process.returncode} from '{profile_name}'")
-
-        except asyncio.TimeoutError:
-            # Command is still running after timeout - this is fine, it's probably a long-running process
-            pass
-        except Exception as e:
-            self.log(f"⚠️ Error checking command status: {str(e)}")
     
     def char_to_key_id(self, key_char: str) -> int | None:
         """Convert key character to key ID (0-15)"""
