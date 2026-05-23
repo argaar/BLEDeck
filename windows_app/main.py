@@ -32,7 +32,7 @@ class BLEDeckGUI(QMainWindow):
         
         # Create tray icon
         self.tray_icon = QSystemTrayIcon(self)
-        self.tray_icon.setIcon(QIcon("icon.ico"))  # put your own icon path here
+        self.tray_icon.setIcon(QIcon("icon.ico"))
         self.tray_icon.setToolTip("BLEDeck Control Panel")
 
         self.already_minimized = False
@@ -87,8 +87,7 @@ class BLEDeckGUI(QMainWindow):
         # Don't start auto-connect by default to prevent connection loops
 
         # Last ping time for connection health
-        self.last_ping_response = 0
-        self.ping_timeout_count = 0
+        self.last_ping_response = time.time()
 
         asyncio.create_task(self.connect())
     
@@ -134,7 +133,7 @@ class BLEDeckGUI(QMainWindow):
 
         # Auto-reconnect checkbox
         self.auto_reconnect_cb = QCheckBox("Auto-reconnect")
-        self.auto_reconnect_cb.stateChanged.connect(self.toggle_auto_reconnect)
+        self.auto_reconnect_cb.toggled.connect(self.toggle_auto_reconnect)
         layout.addWidget(self.auto_reconnect_cb)
 
         # Profile selection
@@ -268,6 +267,7 @@ class BLEDeckGUI(QMainWindow):
         return group
     
     def restore_from_tray(self) -> None:
+        self.already_minimized = False
         self.showNormal()
         self.activateWindow()
 
@@ -286,13 +286,6 @@ class BLEDeckGUI(QMainWindow):
         elif trig is not None and reason == trig:
             # Many Windows setups send Trigger (single click) rather than DoubleClick
             self.restore_from_tray()
-        else:
-            # As a final fallback compare numeric value for DoubleClick (often 3)
-            try:
-                if int(reason) == 3:  
-                    self.restore_from_tray()
-            except Exception:
-                pass
 
     def update_profile_combo(self) -> None:
         # Save current selection
@@ -365,7 +358,7 @@ class BLEDeckGUI(QMainWindow):
                     self.brightness_slider.setValue(brightness)
                     self.brightness_label.setText(f"{brightness}%")
                     self.brightness_slider.blockSignals(False)
-            except AttributeError:
+            except (ValueError, TypeError):
                 self.log(f"Color code: '{color_str}' is invalid")
 
     def on_label_changed(self, text) -> None:
@@ -410,7 +403,7 @@ class BLEDeckGUI(QMainWindow):
                 if len(parts) >= 3:
                     r, g, b = map(int, parts[:3])
                     current_color = QColor(r, g, b)
-            except AttributeError:
+            except (ValueError, TypeError):
                 self.log(f"Color code: '{color_str}' is invalid")
 
         # Open color dialog
@@ -444,8 +437,8 @@ class BLEDeckGUI(QMainWindow):
                         self.color_input.blockSignals(False)
                         # Manually trigger color change
                         self.on_color_changed(new_color_str)
-                except AttributeError:
-                    self.log(f"Color code: {color_str}' is invalid")
+                except (ValueError, TypeError):
+                    self.log(f"Color code: '{color_str}' is invalid")
     
     def create_new_profile(self) -> None:
         """Create a new empty profile"""
@@ -505,12 +498,7 @@ class BLEDeckGUI(QMainWindow):
         # If profile name changed and we're connected, sync with device
         if self.is_connected and old_name != new_name:
             self.log(f"📁 Profile name changed: '{old_name}' → '{new_name}'")
-            asyncio.create_task(self.sync_single_profile(self.current_profile_index))
-    
-    async def sync_single_profile(self, profile_index: int) -> None:
-        """Sync a single profile name to the device - with binary protocol we sync all"""
-        # With the binary protocol, we just resync all profiles
-        await self.synchronize_profiles_to_device()
+            asyncio.create_task(self.synchronize_profiles_to_device())
     
     def sync_profile_from_device(self, device_profile_index: int) -> None:
         """Update app profile to match device profile (called when device encoder changes profile)"""
@@ -626,9 +614,9 @@ class BLEDeckGUI(QMainWindow):
         await self.disconnect()
         # Only restart auto-connect if checkbox is enabled
         if self.auto_reconnect_cb.isChecked():
-            QTimer.singleShot(30000, self.connect_timer.start)  # 30 second delay
+            QTimer.singleShot(30000, lambda: self.connect_timer.start(10000))  # 30 second delay
     
-    def toggle_auto_reconnect(self, checked) -> None:
+    def toggle_auto_reconnect(self, checked: bool) -> None:
         if checked:
             self.log("🔄 Auto-reconnect enabled")
             if not self.is_connected:
@@ -680,7 +668,6 @@ class BLEDeckGUI(QMainWindow):
             
             # Reset connection health tracking
             self.last_ping_response = time.time()
-            self.ping_timeout_count = 0
             
             # Send initial ping and synchronize profiles
             packet = ble_protocol.keep_alive()
@@ -748,16 +735,12 @@ class BLEDeckGUI(QMainWindow):
         
         self.log("✅ Disconnected")
     
-    async def send_ble(self, data: bytes | str) -> None:
+    async def send_ble(self, data: bytes) -> None:
         """Send binary data to BLE device"""
         if not self.ble_client or not self.is_connected:
             return
 
         try:
-            # Convert to bytes if needed (for backwards compatibility)
-            if isinstance(data, str):
-                data = data.encode()
-
             # Check if client is still valid before sending
             if not self.ble_client.is_connected:
                 self.log("⚠️ Cannot send - not connected")
@@ -851,7 +834,11 @@ class BLEDeckGUI(QMainWindow):
         if not self.is_connected:
             asyncio.create_task(self.connect())
     
-    async def handle_notification(self, sender: Any, data: bytes) -> None:
+    def handle_notification(self, sender: Any, data: bytes) -> None:
+        """Sync bleak callback — schedules async processing on the running loop."""
+        asyncio.create_task(self._process_notification(sender, data))
+
+    async def _process_notification(self, sender: Any, data: bytes) -> None:
         """Handle incoming binary protocol packets from device"""
         try:
             # Check if we're still connected
@@ -860,7 +847,6 @@ class BLEDeckGUI(QMainWindow):
 
             # Any message is a sign of life - update connection health
             self.last_ping_response = time.time()
-            self.ping_timeout_count = 0
 
             # Log raw data (with opcode hint)
             opcode_hint = ""

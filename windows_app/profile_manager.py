@@ -1,17 +1,17 @@
 import json
 import logging
-import os
+from pathlib import Path
 from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
-CONFIG_PATH = "profiles.json"
+CONFIG_PATH = Path("profiles.json")
 
 ProfileData = Dict[str, Any]
 
 
 def load_profiles() -> List[ProfileData]:
-    if not os.path.exists(CONFIG_PATH):
+    if not CONFIG_PATH.exists():
         default_profiles: List[ProfileData] = [
             {
                 "name": "Default",
@@ -39,7 +39,7 @@ def load_profiles() -> List[ProfileData]:
         return default_profiles
 
     try:
-        with open(CONFIG_PATH, "r") as f:
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             profiles: List[ProfileData] = json.load(f)
             for profile in profiles:
                 if 'keys' not in profile:
@@ -53,10 +53,10 @@ def load_profiles() -> List[ProfileData]:
 
 def save_profiles(profiles: List[ProfileData]) -> bool:
     try:
-        with open(CONFIG_PATH, "w") as f:
-            json.dump(profiles, f, indent=2)
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(profiles, f, indent=2, ensure_ascii=False)
         return True
-    except Exception as e:
+    except OSError as e:
         logger.error("Error saving profiles: %s", e)
         return False
 

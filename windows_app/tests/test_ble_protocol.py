@@ -169,3 +169,143 @@ class TestOpcodeConstants:
         assert ble_protocol.OP_BUTTON_PRESSED == 0x83
         assert ble_protocol.OP_KEY_PRESSED == 0x84
         assert ble_protocol.OP_BATTERY_STATUS == 0x85
+
+
+class TestParseColorStringEdgeCases:
+    def test_whitespace_only(self):
+        assert ble_protocol.parse_color_string("   ") is None
+
+    def test_all_zeros(self):
+        assert ble_protocol.parse_color_string("0,0,0,0") == (0, 0, 0, 0)
+
+    def test_max_rgb_and_brightness(self):
+        assert ble_protocol.parse_color_string("255,255,255,100") == (255, 255, 255, 100)
+
+    def test_brightness_clamped_at_100(self):
+        r, g, b, w = ble_protocol.parse_color_string("0,0,0,200")
+        assert w == 100
+
+    def test_rgb_clamped_at_255(self):
+        r, g, b, w = ble_protocol.parse_color_string("999,999,999,50")
+        assert r == 255 and g == 255 and b == 255
+
+    def test_negative_rgb_clamped_to_zero(self):
+        r, g, b, w = ble_protocol.parse_color_string("-10,-20,-30,50")
+        assert r == 0 and g == 0 and b == 0
+
+    def test_float_string_is_invalid(self):
+        assert ble_protocol.parse_color_string("1.5,2.0,3.0,50") is None
+
+    def test_empty_color_string_for_unassigned_key(self):
+        # Empty string represents a key with no color — must return None, not crash
+        assert ble_protocol.parse_color_string("") is None
+
+    def test_none_for_unassigned_key(self):
+        # None represents a key with no color — must return None, not crash
+        assert ble_protocol.parse_color_string(None) is None
+
+
+class TestSetRgbKeyBoundaries:
+    def test_key_index_zero(self):
+        packet = ble_protocol.set_rgb_key(0, 255, 0, 0, 100)
+        opcode, payload = ble_protocol.BLEPacket.parse(packet)
+        assert opcode == ble_protocol.OP_SET_RGB_KEY
+        assert payload[0] == 0
+        assert payload[1] == 255
+
+    def test_key_index_fifteen(self):
+        packet = ble_protocol.set_rgb_key(15, 0, 255, 0, 50)
+        opcode, payload = ble_protocol.BLEPacket.parse(packet)
+        assert payload[0] == 15
+        assert payload[2] == 255
+
+    def test_all_zeros(self):
+        packet = ble_protocol.set_rgb_key(0, 0, 0, 0, 0)
+        opcode, payload = ble_protocol.BLEPacket.parse(packet)
+        assert payload == b'\x00\x00\x00\x00\x00'
+
+    def test_payload_length(self):
+        packet = ble_protocol.set_rgb_key(3, 10, 20, 30, 70)
+        assert len(packet) == 4 + 5  # header + 5 payload bytes
+
+
+class TestSetAllRgbKeysValues:
+    def test_all_off(self):
+        rgbw = [(0, 0, 0, 0)] * 16
+        packet = ble_protocol.set_all_rgb_keys(rgbw)
+        opcode, payload = ble_protocol.BLEPacket.parse(packet)
+        assert opcode == ble_protocol.OP_SET_ALL_RGB_KEYS
+        assert payload == bytes(64)
+
+    def test_per_key_values_preserved(self):
+        rgbw = [(i, i * 2 % 256, i * 3 % 256, i * 4 % 101) for i in range(16)]
+        packet = ble_protocol.set_all_rgb_keys(rgbw)
+        _, payload = ble_protocol.BLEPacket.parse(packet)
+        for i in range(16):
+            base = i * 4
+            assert payload[base]     == rgbw[i][0]
+            assert payload[base + 1] == rgbw[i][1]
+            assert payload[base + 2] == rgbw[i][2]
+            assert payload[base + 3] == rgbw[i][3]
+
+
+class TestChangeProfileUtf8:
+    def test_ascii_name_roundtrip(self):
+        packet = ble_protocol.change_profile(2, "Work")
+        opcode, payload = ble_protocol.BLEPacket.parse(packet)
+        assert opcode == ble_protocol.OP_CHANGE_PROFILE
+        assert payload[0] == 2
+        name_len = payload[1]
+        assert payload[2:2 + name_len].decode("utf-8") == "Work"
+
+    def test_utf8_name(self):
+        packet = ble_protocol.change_profile(1, "プロ🎹")
+        opcode, payload = ble_protocol.BLEPacket.parse(packet)
+        name_len = payload[1]
+        assert payload[2:2 + name_len].decode("utf-8") == "プロ🎹"
+
+    def test_empty_name(self):
+        packet = ble_protocol.change_profile(1, "")
+        opcode, payload = ble_protocol.BLEPacket.parse(packet)
+        assert payload[1] == 0
+
+
+class TestSyncProfilesEdgeCases:
+    def test_empty_profiles(self):
+        packet = ble_protocol.sync_profiles({})
+        opcode, payload = ble_protocol.BLEPacket.parse(packet)
+        assert opcode == ble_protocol.OP_SYNC_PROFILES
+        assert payload[0] == 0
+
+    def test_utf8_profile_name(self):
+        packet = ble_protocol.sync_profiles({1: "Ñoño"})
+        opcode, payload = ble_protocol.BLEPacket.parse(packet)
+        assert payload[0] == 1
+        name_len = payload[2]
+        assert payload[3:3 + name_len].decode("utf-8") == "Ñoño"
+
+    def test_count_field_matches_dict(self):
+        packet = ble_protocol.sync_profiles({1: "A", 2: "B", 3: "C"})
+        _, payload = ble_protocol.BLEPacket.parse(packet)
+        assert payload[0] == 3
+
+
+class TestBLEPacketParse:
+    def test_truncated_payload_returns_partial(self):
+        # Packet declares 4 bytes but only 2 are present — parse reads what's there
+        raw = b'\xaa\x85\x00\x04\x01\x02'
+        opcode, payload = ble_protocol.BLEPacket.parse(raw)
+        assert opcode == 0x85
+        assert payload == b'\x01\x02'  # only bytes available
+
+    def test_extra_trailing_bytes_ignored(self):
+        raw = b'\xaa\x01\x00\x00\xff\xff\xff'
+        opcode, payload = ble_protocol.BLEPacket.parse(raw)
+        assert opcode == ble_protocol.OP_KEEP_ALIVE
+        assert payload == b''
+
+    def test_exact_four_bytes_no_payload(self):
+        raw = b'\xaa\x01\x00\x00'
+        opcode, payload = ble_protocol.BLEPacket.parse(raw)
+        assert opcode == 0x01
+        assert payload == b''

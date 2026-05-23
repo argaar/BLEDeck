@@ -111,7 +111,7 @@ def set_all_rgb_keys(rgbw_list: list[RGBW]) -> bytes:
 # ----------------------------
 # Parsing helpers
 # ----------------------------
-def parse_color_string(color_str: str) -> RGBW | None:
+def parse_color_string(color_str: str | None) -> RGBW | None:
     """Parse 'R,G,B,W' string into (r, g, b, w) tuple. Return None on failure."""
     if not color_str:
         return None

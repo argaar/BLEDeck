@@ -8,7 +8,7 @@ Connects over BLE, manages profiles, assigns shell commands to keys, and syncs c
 ## Requirements
 
 - Windows 10 or 11
-- Python 3.10 or later
+- Python 3.12 or later
 - Bluetooth adapter with BLE support
 
 ---
