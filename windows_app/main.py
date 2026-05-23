@@ -6,7 +6,7 @@ import time
 import qasync
 import ctypes
 from typing import Any
-from bleak import BleakClient, BleakScanner
+from bleak import BleakClient, BleakGATTCharacteristic, BleakScanner
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
                              QWidget, QLabel, QPushButton, QLineEdit, QComboBox,
                              QGridLayout, QGroupBox, QStatusBar, QTextEdit,
@@ -60,6 +60,7 @@ class BLEDeckGUI(QMainWindow):
         # BLE connection state
         self.ble_client = None
         self.is_connected = False
+        self._connecting = False
         self.current_profile_index = 0
 
         # Data
@@ -626,6 +627,9 @@ class BLEDeckGUI(QMainWindow):
             self.connect_timer.stop()
     
     async def connect(self) -> None:
+        if self._connecting or self.is_connected:
+            return
+        self._connecting = True
         try:
             self.log("Scanning for BLEDeck...")
             
@@ -642,7 +646,7 @@ class BLEDeckGUI(QMainWindow):
                 return
             
             self.log(f"Found device: {target.name} ({target.address})")
-            self.ble_client = BleakClient(target.address)
+            self.ble_client = BleakClient(target.address, disconnected_callback=self._on_ble_disconnected)
             
             # Connect with timeout
             await asyncio.wait_for(self.ble_client.connect(), timeout=10.0)
@@ -688,6 +692,8 @@ class BLEDeckGUI(QMainWindow):
         except Exception as e:
             self.log(f"❌ Connection failed: {str(e)}")
             await self.cleanup_failed_connection()
+        finally:
+            self._connecting = False
     
     async def cleanup_failed_connection(self) -> None:
         self.is_connected = False
@@ -734,7 +740,20 @@ class BLEDeckGUI(QMainWindow):
             btn.set_active(False)
         
         self.log("✅ Disconnected")
-    
+
+    def _on_ble_disconnected(self, client: BleakClient) -> None:
+        """Bleak calls this from its thread when the device drops unexpectedly."""
+        QTimer.singleShot(0, lambda: asyncio.create_task(self._handle_unexpected_disconnect()))
+
+    async def _handle_unexpected_disconnect(self) -> None:
+        if not self.is_connected:
+            return
+        self.log("❌ Device disconnected unexpectedly")
+        await self.disconnect()
+        if self.auto_reconnect_cb.isChecked():
+            self.log("🔄 Auto-reconnect: retrying in 10s...")
+            self.connect_timer.start(10000)
+
     async def send_ble(self, data: bytes) -> None:
         """Send binary data to BLE device"""
         if not self.ble_client or not self.is_connected:
@@ -743,7 +762,7 @@ class BLEDeckGUI(QMainWindow):
         try:
             # Check if client is still valid before sending
             if not self.ble_client.is_connected:
-                self.log("⚠️ Cannot send - not connected")
+                asyncio.create_task(self._handle_unexpected_disconnect())
                 return
 
             # Send with timeout but don't disconnect on timeout (could be temporary)
@@ -834,11 +853,11 @@ class BLEDeckGUI(QMainWindow):
         if not self.is_connected:
             asyncio.create_task(self.connect())
     
-    def handle_notification(self, sender: Any, data: bytes) -> None:
+    def handle_notification(self, sender: BleakGATTCharacteristic, data: bytearray) -> None:
         """Sync bleak callback — schedules async processing on the running loop."""
         asyncio.create_task(self._process_notification(sender, data))
 
-    async def _process_notification(self, sender: Any, data: bytes) -> None:
+    async def _process_notification(self, sender: BleakGATTCharacteristic, data: bytearray) -> None:
         """Handle incoming binary protocol packets from device"""
         try:
             # Check if we're still connected

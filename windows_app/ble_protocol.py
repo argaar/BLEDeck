@@ -52,7 +52,7 @@ class BLEPacket:
         return struct.pack(">BBH", START_BYTE, opcode, length) + payload
 
     @staticmethod
-    def parse(raw: bytes) -> Tuple[int, bytes]:
+    def parse(raw: bytes | bytearray) -> Tuple[int, bytes]:
         if len(raw) < 4:
             raise ValueError("Invalid packet, too short")
 
