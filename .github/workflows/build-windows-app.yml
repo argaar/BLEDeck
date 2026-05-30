@@ -12,6 +12,10 @@ on:
 permissions:
   contents: write  # required to upload the asset onto the release
 
+# Opt every JS action onto Node 24 ahead of the June 2026 default switch.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build:
     name: PyInstaller bundle

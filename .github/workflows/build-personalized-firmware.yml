@@ -53,8 +53,13 @@ jobs:
           sed -i "s|your_wifi_password|$(esc "$WIFI_PASSWORD")|"       credentials.h
           sed -i "s|your_ota_http_password|$(esc "$OTA_HTTP_PASSWORD")|" credentials.h
 
-      - name: Set up PlatformIO
-        uses: native-instruments/setup-platformio-core-action@main
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install PlatformIO
+        run: pip install platformio
 
       - name: Build
         working-directory: firmware
