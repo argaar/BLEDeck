@@ -1,0 +1,81 @@
+name: Build Personalized Firmware
+
+# Builds an ESP32 firmware binary with the caller's WiFi + OTA credentials
+# baked in, then emails the .bin to the requested address. Credentials are
+# supplied at dispatch time, masked in the logs, written only to a gitignored
+# credentials.h, and deleted at the end of the run.
+on:
+  workflow_dispatch:
+    inputs:
+      wifi_ssid:
+        description: "WiFi SSID"
+        required: true
+      wifi_password:
+        description: "WiFi Password"
+        required: true
+      ota_http_password:
+        description: "OTA HTTP Password"
+        required: true
+      recipient_email:
+        description: "Your email address to receive the binary"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and email firmware
+    runs-on: ubuntu-latest
+    env:
+      WIFI_SSID: ${{ inputs.wifi_ssid }}
+      WIFI_PASSWORD: ${{ inputs.wifi_password }}
+      OTA_HTTP_PASSWORD: ${{ inputs.ota_http_password }}
+    steps:
+      # Mask first, reading from env so the secret never appears inline in the
+      # rendered run command (which the runner prints to the log).
+      - name: Mask credentials
+        run: |
+          echo "::add-mask::$WIFI_SSID"
+          echo "::add-mask::$WIFI_PASSWORD"
+          echo "::add-mask::$OTA_HTTP_PASSWORD"
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Generate credentials.h
+        working-directory: firmware/src
+        run: |
+          cp credentials.h.example credentials.h
+          # Escape sed replacement metacharacters (\ & |) in each value.
+          esc() { printf '%s' "$1" | sed -e 's/[\\&|]/\\&/g'; }
+          sed -i "s|your_wifi_ssid|$(esc "$WIFI_SSID")|"               credentials.h
+          sed -i "s|your_wifi_password|$(esc "$WIFI_PASSWORD")|"       credentials.h
+          sed -i "s|your_ota_http_password|$(esc "$OTA_HTTP_PASSWORD")|" credentials.h
+
+      - name: Set up PlatformIO
+        uses: native-instruments/setup-platformio-core-action@main
+
+      - name: Build
+        working-directory: firmware
+        run: pio run -e nodemcu-32
+
+      - name: Email firmware binary
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          from: ${{ secrets.MAIL_USERNAME }}
+          to: ${{ inputs.recipient_email }}
+          subject: Firmware build ready
+          body: Your personalized firmware binary is attached.
+          attachments: firmware/.pio/build/nodemcu-32/firmware.bin
+
+      # Always remove the generated credentials, even if the build or email failed.
+      - name: Delete credentials.h
+        if: always()
+        working-directory: firmware/src
+        run: rm -f credentials.h
