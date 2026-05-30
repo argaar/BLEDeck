@@ -12,15 +12,10 @@ on:
 permissions:
   contents: write  # required to upload the asset onto the release
 
-# Force any Node-based action still shipping a Node 20 runtime onto Node 24
-# ahead of the June 2026 default switch.
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 jobs:
   build:
     name: PyInstaller bundle
-    runs-on: windows-latest
+    runs-on: windows-2025
     steps:
       - uses: actions/checkout@v5
 

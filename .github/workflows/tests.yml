@@ -23,11 +23,6 @@ on:
 permissions:
   contents: read
 
-# Force any Node-based action still shipping a Node 20 runtime (e.g.
-# actions/cache@v4) onto Node 24 ahead of the June 2026 default switch.
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 jobs:
   firmware-native:
     name: Firmware native (Unity)
@@ -42,15 +37,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Cache PlatformIO
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.platformio
-            ~/.cache/pip
-          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
-          restore-keys: pio-${{ runner.os }}-
-
       - name: Install PlatformIO
         run: pip install platformio
 
@@ -62,7 +48,7 @@ jobs:
     # windows-latest is required: pynput, bleak/winrt, and the Win32 ctypes
     # helpers in windows_app are Windows-only and fail to import elsewhere.
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == 'python' }}
-    runs-on: windows-latest
+    runs-on: windows-2025
     steps:
       - uses: actions/checkout@v5
 
