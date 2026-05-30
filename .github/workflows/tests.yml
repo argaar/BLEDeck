@@ -48,7 +48,7 @@ jobs:
     # windows-latest is required: pynput, bleak/winrt, and the Win32 ctypes
     # helpers in windows_app are Windows-only and fail to import elsewhere.
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == 'python' }}
-    runs-on: windows-2025
+    runs-on: windows-2025-vs2026
     steps:
       - uses: actions/checkout@v5
 
