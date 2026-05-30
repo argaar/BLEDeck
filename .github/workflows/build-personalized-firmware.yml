@@ -23,6 +23,12 @@ on:
 permissions:
   contents: read
 
+# Opt every JS action onto Node 24 ahead of the June 2026 default switch.
+# Safe to set at workflow level: it carries no secret, so the per-step env
+# dump that leaked the credentials before does not apply here.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build:
     name: Build and email firmware
@@ -82,7 +88,7 @@ jobs:
           secure: true
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          from: ${{ secrets.MAIL_USERNAME }}
+          from: BLEDeck - NoReply <${{ secrets.MAIL_USERNAME }}>
           to: ${{ inputs.recipient_email }}
           subject: Firmware build ready
           body: Your personalized firmware binary is attached.

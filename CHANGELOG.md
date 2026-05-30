@@ -20,6 +20,7 @@ per-component sections below.
 ## windows_app
 
 ### v0.2.6 — 2026-05-30
+- Security: bumped `markdown` `3.7` → `3.10.2` (PYSEC-2026-89 — unhandled `AssertionError` DoS on malformed Markdown) and `pytest` `<9` → `>=9.0.3` (CVE-2025-71176 — predictable `/tmp/pytest-of-*` dir on UNIX); lifted the stale `pytest-asyncio<1` cap to `>=1.4` and `pytest-benchmark` to `>=5`. Clears all three Dependabot alerts; 258 tests still green under pytest 9
 - DX: `pyproject.toml` at repo root — single `pip install -e .[dev]` (or `.[dev,build]`) replaces the three `requirements*.txt` install dance; declares `windows_app`/`simulator`/`debug` packages and registers `bledeck-decode` as a console script
 - DX: cross-platform `setup-dev.sh` mirrors `setup-dev.bat`; both now install runtime + dev + build deps and verify with `pytest` in one shot
 - DX: `run-tests.bat` / `run-tests.sh` at repo root — unified runner for Python suites + firmware native Unity tests; clean SKIP when `pio` is absent
