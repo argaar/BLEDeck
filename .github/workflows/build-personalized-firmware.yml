@@ -27,18 +27,27 @@ jobs:
   build:
     name: Build and email firmware
     runs-on: ubuntu-latest
-    env:
-      WIFI_SSID: ${{ inputs.wifi_ssid }}
-      WIFI_PASSWORD: ${{ inputs.wifi_password }}
-      OTA_HTTP_PASSWORD: ${{ inputs.ota_http_password }}
     steps:
-      # Mask first, reading from env so the secret never appears inline in the
-      # rendered run command (which the runner prints to the log).
-      - name: Mask credentials
+      # Read the dispatch inputs from the event payload at runtime, mask them,
+      # then re-export via $GITHUB_ENV. Do NOT put them under a job/step `env:`
+      # key: the runner prints each step's env block in plaintext at step
+      # start, and workflow_dispatch inputs are not auto-masked like secrets —
+      # on a public repo that leaks them into public logs. Reading from the
+      # event file keeps the values out of both the rendered script and the
+      # env dump; add-mask then scrubs them from all later output.
+      - name: Mask and load credentials
         run: |
+          WIFI_SSID=$(jq -r '.inputs.wifi_ssid' "$GITHUB_EVENT_PATH")
+          WIFI_PASSWORD=$(jq -r '.inputs.wifi_password' "$GITHUB_EVENT_PATH")
+          OTA_HTTP_PASSWORD=$(jq -r '.inputs.ota_http_password' "$GITHUB_EVENT_PATH")
           echo "::add-mask::$WIFI_SSID"
           echo "::add-mask::$WIFI_PASSWORD"
           echo "::add-mask::$OTA_HTTP_PASSWORD"
+          {
+            echo "WIFI_SSID=$WIFI_SSID"
+            echo "WIFI_PASSWORD=$WIFI_PASSWORD"
+            echo "OTA_HTTP_PASSWORD=$OTA_HTTP_PASSWORD"
+          } >> "$GITHUB_ENV"
 
       - name: Checkout
         uses: actions/checkout@v5
