@@ -12,15 +12,20 @@ on:
 permissions:
   contents: write  # required to upload the asset onto the release
 
+# Force any Node-based action still shipping a Node 20 runtime onto Node 24
+# ahead of the June 2026 default switch.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build:
     name: PyInstaller bundle
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -33,23 +38,22 @@ jobs:
         shell: cmd
         run: build.bat
 
-      - name: Package bundle
-        shell: pwsh
-        run: |
-          $zip = "BLEDeck-windows.zip"
-          Compress-Archive -Path windows_app/dist/BLEDeck/* -DestinationPath $zip -Force
-          echo "ZIP=$zip" >> $env:GITHUB_ENV
-
+      # upload-artifact zips its input itself — point it at the bundle folder,
+      # not a pre-made zip, otherwise the download is a zip-inside-a-zip.
       - name: Upload run artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: BLEDeck-windows
-          path: ${{ env.ZIP }}
+          path: windows_app/dist/BLEDeck/
           if-no-files-found: error
 
+      # Release assets must be a single real file, so zip explicitly here.
       - name: Attach to release
         if: ${{ github.event_name == 'release' }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" "${{ env.ZIP }}" --clobber
+        run: |
+          $zip = "BLEDeck-${{ github.event.release.tag_name }}-windows.zip"
+          Compress-Archive -Path windows_app/dist/BLEDeck/* -DestinationPath $zip -Force
+          gh release upload "${{ github.event.release.tag_name }}" "$zip" --clobber
