@@ -3,9 +3,10 @@
 ### LED RGB WS2812b SMD 4020
 https://jlcpcb.com/partdetail/Worldsemi-WS2812B4020/C965557
 
-### Through Hole Resistor 2.2*6.5 250mW (15k + 4.7k)
+### Through Hole Resistor 2.2*6.5 250mW (15k + 4.3k)
+Battery voltage divider on GPIO 13 (R1=15k top to BAT+, R2=4.3k bottom to GND).
 https://jlcpcb.com/partdetail/59662-MFR0W4F1502A50/C58617
-https://jlcpcb.com/partdetail/58236-MFR0W4F4701A50/C57204
+https://jlcpcb.com/partdetail/NTEElectronics-QW243/C6262373
 
 ### ESP32 DevKitC v1
 https://lastminuteengineers.com/esp32-pinout-reference/

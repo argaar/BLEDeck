@@ -3,12 +3,28 @@
 #include <ElegantOTA.h>
 #include <WiFi.h>
 
+// Migration guard: v1.2.2 renamed OTA_PASSWORD -> OTA_HTTP_PASSWORD in
+// credentials.h.example. Fail loudly on stale credentials.h files so users
+// see a clear action item instead of a cryptic undefined-symbol error
+// elsewhere in the build.
+#ifndef OTA_HTTP_PASSWORD
+#error "credentials.h: rename OTA_PASSWORD to OTA_HTTP_PASSWORD (see firmware/src/credentials.h.example and CHANGELOG v1.2.2)"
+#endif
+
 OtaManager::OtaManager(SSD1306Wire* display)
   : display_(display), server_(new WebServer(80)),
     startTime_(0), lastApCheckMs_(0),
-    apMode_(false), updating_(false), lastClientCount_(0) {
+    apMode_(false), updating_(false), lastClientCount_(0),
+    authLimiter_() {
   hostname_[0] = '\0';
+  apPassword_[0] = '\0';
 }
+
+// ---------------------------------------------------------------------------
+// Auth-failure rate-limit logic lives in the header-only OtaRateLimiter
+// struct (ota_manager.h) so it can be exercised by host-side Unity tests
+// without dragging in Arduino or WiFi headers. See
+// test/test_ota_rate_limit/test_main.cpp.
 
 OtaManager::~OtaManager() {
   delete server_;
@@ -42,7 +58,7 @@ void OtaManager::connectSta(const char* ssid, const char* password) {
   }
 }
 
-void OtaManager::startAp(const char* otaPassword) {
+void OtaManager::startAp(const char* apPassword) {
   display_->clear();
   display_->setFont(ArialMT_Plain_10);
   display_->drawString(0, 0, "OTA Mode");
@@ -52,7 +68,7 @@ void OtaManager::startAp(const char* otaPassword) {
   // Mode switch then softAP with delay between - fixes "ESP_XXXX" SSID bug
   WiFi.mode(WIFI_AP);
   delay(200);
-  WiFi.softAP(OTA_AP_SSID, otaPassword);
+  WiFi.softAP(OTA_AP_SSID, apPassword);
   delay(500);   // let beacon start broadcasting with the configured SSID
 
   Serial.printf("AP: %s @ %s\n", OTA_AP_SSID, WiFi.softAPIP().toString().c_str());
@@ -61,11 +77,14 @@ void OtaManager::startAp(const char* otaPassword) {
 
 // ---------------------------------------------------------------------------
 
-void OtaManager::begin(const char* ssid, const char* password,
-                       const char* otaPassword, const char* hostname) {
+void OtaManager::begin(const char* ssid, const char* staPassword,
+                       const char* apPassword, const char* httpPassword,
+                       const char* hostname) {
   startTime_ = millis();
   strncpy(hostname_, hostname, sizeof(hostname_) - 1);
   hostname_[sizeof(hostname_) - 1] = '\0';
+  strncpy(apPassword_, apPassword, sizeof(apPassword_) - 1);
+  apPassword_[sizeof(apPassword_) - 1] = '\0';
 
   // Reset WiFi to a known-clean state
   WiFi.disconnect(true);
@@ -73,21 +92,22 @@ void OtaManager::begin(const char* ssid, const char* password,
   delay(100);
 
   // Try home WiFi first, fall back to AP
-  connectSta(ssid, password);
+  connectSta(ssid, staPassword);
   if (WiFi.status() != WL_CONNECTED) {
     Serial.printf("STA failed (status=%d), switching to AP\n", WiFi.status());
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
     delay(100);
-    startAp(otaPassword);
+    startAp(apPassword_);
   } else {
     apMode_ = false;
     Serial.printf("STA connected: %s\n", WiFi.localIP().toString().c_str());
   }
 
   // ElegantOTA - serve at http://<ip>/update
-  // Empty username; OTA password used for HTTP Basic auth on the upload page
-  ElegantOTA.begin(server_, "", otaPassword);
+  // Empty username; httpPassword used for HTTP Basic auth on the upload page.
+  // Distinct from apPassword_ to avoid credential reuse across two trust boundaries.
+  ElegantOTA.begin(server_, "", httpPassword);
 
   ElegantOTA.onStart([this]() {
     updating_ = true;
@@ -139,6 +159,19 @@ void OtaManager::begin(const char* ssid, const char* password,
 // ---------------------------------------------------------------------------
 
 void OtaManager::loop() {
+  // Rate-limit gate: if we are inside the post-failure lockout window, drop
+  // incoming HTTP traffic entirely (no handleClient → connections close).
+  // TODO: ElegantOTA 3.1.7 does not expose an auth-failure callback. The
+  // `_authenticate` checks live inside its private route handlers, so we have
+  // no clean injection point to call `authLimiter_.recordFailure()` on each
+  // 401. The counter / lockout infrastructure is wired and ready; when the
+  // library grows an `onAuthFail` hook (or we self-host the route handlers)
+  // call `authLimiter_.recordFailure(millis())` from there. Until then the
+  // lockout only triggers if some future code path records failures
+  // explicitly.
+  if (authLimiter_.isLockedOut(millis())) {
+    return;
+  }
   server_->handleClient();
   ElegantOTA.loop();
 
@@ -165,11 +198,12 @@ void OtaManager::showReady() {
   display_->clear();
 
   if (apMode_) {
-    display_->setFont(ArialMT_Plain_16);
-    display_->drawString(0, 0, "AP Mode");
     display_->setFont(ArialMT_Plain_10);
-    display_->drawString(0, 18, "SSID: " OTA_AP_SSID);
-    display_->drawString(0, 28, WiFi.softAPIP().toString().c_str() + String("/update"));
+    display_->drawString(0, 0, "AP: " OTA_AP_SSID);
+    char pwLine[24];
+    snprintf(pwLine, sizeof(pwLine), "PW: %s", apPassword_);
+    display_->drawString(0, 11, pwLine);
+    display_->drawString(0, 22, WiFi.softAPIP().toString().c_str() + String("/update"));
     if (lastClientCount_ > 0) {
       char buf[28];
       snprintf(buf, sizeof(buf), "%d device(s) connected", (int)lastClientCount_);

@@ -71,11 +71,10 @@ Example breakdown:
 
 #### Set RGB Key (0x04)
 ```
-aa 04 00 06 00 05 ff 00 00 32
+aa 04 00 05 05 ff 00 00 32
 ```
-- Byte 4: Profile index
-- Byte 5: Key index (0-15)
-- Byte 6-9: R, G, B, W values
+- Byte 4: Key index (0-15)
+- Byte 5-8: R, G, B, W values
 
 #### Set All RGB Keys (0x05)
 ```
@@ -89,6 +88,24 @@ aa 05 00 40 [64 bytes of RGBW data]
 aa 06 00 01 01    (locked)
 aa 06 00 01 00    (unlocked)
 ```
+
+#### Hello (0x07)
+Protocol-version handshake, sent immediately after notify subscription.
+```
+aa 07 00 07 01 05 30 2e 32 2e 33
+│  │  │  │  │  │  └──┴──┴──┴──┘
+│  │  │  │  │  │  "0.2.3" (UTF-8 app version)
+│  │  │  │  │  └─ App version length: 5
+│  │  │  │  └─ Protocol version: 1
+│  │  │  └─ Length low: 0x07 (7 bytes)
+│  │  └─ Length high: 00
+│  └─ Opcode: 07 (HELLO)
+└─ Start: AA
+```
+- Byte 4: `PROTOCOL_VERSION` (currently `0x01`)
+- Byte 5: app version length (here `0x05`)
+- Bytes 6+: app version string ("0.2.3")
+- Firmware replies with `0x86 DEVICE_TELEMETRY`.
 
 ### Events (Device → App)
 
@@ -125,6 +142,30 @@ aa 85 00 01 ff    (no battery / USB-only)
 ```
 - Byte 4: Battery percentage `0–100`, or `0xFF` when no LiPo cell is detected
 - Sent automatically ~every 30 s while a host is connected
+
+#### Device Telemetry (0x86)
+Reply to `HELLO`. Carries protocol version, firmware version, and runtime stats.
+```
+aa 86 00 12 01 05 31 2e 32 2e 33 00 00 13 88 01 00 03 0d 40 00 00
+│  │  │  │  │  │  └──┴──┴──┴──┘  └──┴──┴──┴──┘ │  └──┴──┴──┴──┘ └──┘
+│  │  │  │  │  │  "1.2.3"        uptime=5000ms │  free_heap     ble_errors=0
+│  │  │  │  │  │                  (0x00001388) │  =200000 bytes (uint16 BE)
+│  │  │  │  │  │                               │  (0x00030D40)
+│  │  │  │  │  │                               └─ reset_reason: 1 (POWERON)
+│  │  │  │  │  └─ Firmware version length: 5
+│  │  │  │  └─ Protocol version: 1
+│  │  │  └─ Length low: 0x12 (18 bytes)
+│  │  └─ Length high: 00
+│  └─ Opcode: 86 (DEVICE_TELEMETRY)
+└─ Start: AA
+```
+- Byte 4: protocol_version (compare against host)
+- Byte 5: firmware version length
+- Bytes 6..10: firmware version ("1.2.3")
+- Bytes 11..14: uptime_ms big-endian uint32
+- Byte 15: reset_reason (`0`=unknown, `1`=POWERON, `3`=software, `5`=deep-sleep wake, `6`=brownout, `8`=task WDT, `9`=interrupt WDT)
+- Bytes 16..19: free_heap big-endian uint32 (bytes available)
+- Bytes 20..21: ble_error_count big-endian uint16 (cumulative since boot — spike ⇒ radio drift / version mismatch)
 
 ## Debugging in the Windows App
 
@@ -220,17 +261,16 @@ aa 03 00 0e 02 01 07 50726f66696c65 02 09 50726f66696c6532
 
 ## Testing Protocol Encoding
 
-Use the `test_protocol.py` script to verify encoding:
+Run the protocol unit tests to verify encoding:
 
 ```bash
-python test_protocol.py
+pytest windows_app/tests/test_ble_protocol.py -v
 ```
 
 This will:
-- Encode test packets
-- Display hex output
-- Parse them back
-- Verify correctness
+- Encode test packets via the real builders
+- Parse them back through `BLEPacket.parse`
+- Verify correctness against the spec
 
 ## Manual Packet Creation
 

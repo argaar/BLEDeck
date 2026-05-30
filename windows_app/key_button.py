@@ -1,6 +1,6 @@
 import logging
 
-from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtWidgets import QPushButton, QSizePolicy
 
 import ble_protocol
 
@@ -14,7 +14,8 @@ class KeyButton(QPushButton):
         self.key_number = text
         self.key_label = ""
         self.key_color: tuple[int, int, int, int] | None = None
-        self.setFixedSize(80, 80)
+        self.setMinimumSize(70, 70)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.is_active = False
         self.update_button_text()
         self.update_button_style()

@@ -64,16 +64,10 @@ def step_to_dict(step: MacroStep) -> dict[str, Any]:
 def step_from_dict(d: dict[str, Any]) -> MacroStep:
     t = d.get("type")
     if t == "click":
-        if "relative_to" in d:
-            relative_to = d["relative_to"]
-        elif d.get("relative", False):
-            relative_to = "window:"  # old relative=True → any foreground window
-        else:
-            relative_to = "abs"
         return ClickStep(
             x=int(d["x"]), y=int(d["y"]),
             button=d.get("button", "left"),
-            relative_to=relative_to,
+            relative_to=d.get("relative_to", "abs"),
         )
     if t == "key":
         return KeyStep(
@@ -81,7 +75,10 @@ def step_from_dict(d: dict[str, Any]) -> MacroStep:
             modifiers=tuple(d.get("modifiers", [])),
         )
     if t == "sleep":
-        return SleepStep(duration_ms=int(d["duration_ms"]))
+        ms = int(d["duration_ms"])
+        if ms < 0:
+            raise ValueError(f"SleepStep duration_ms must be non-negative, got {ms}")
+        return SleepStep(duration_ms=min(ms, 60_000))
     raise ValueError(f"Unknown step type: {t!r}")
 
 

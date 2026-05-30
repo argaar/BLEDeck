@@ -131,28 +131,6 @@ class TestStepFromDict:
         assert step == KeyStep(key="tab", modifiers=())
 
 
-class TestBackwardCompat:
-    """Old JSON format used relative: bool; new format uses relative_to: str."""
-
-    def test_old_relative_true_migrates_to_foreground(self):
-        step = step_from_dict({"type": "click", "x": 1, "y": 2, "relative": True})
-        assert step.relative_to == "window:"
-
-    def test_old_relative_false_migrates_to_abs(self):
-        step = step_from_dict({"type": "click", "x": 1, "y": 2, "relative": False})
-        assert step.relative_to == "abs"
-
-    def test_new_relative_to_takes_precedence_over_old_relative(self):
-        step = step_from_dict({"type": "click", "x": 1, "y": 2,
-                               "relative_to": "window:Calc", "relative": True})
-        assert step.relative_to == "window:Calc"
-
-    def test_old_relative_true_roundtrip_description(self):
-        step = step_from_dict({"type": "click", "x": 10, "y": 20, "relative": True})
-        d = step_description(step)
-        assert "foreground" in d
-
-
 class TestMacroListRoundtrip:
     def test_empty(self):
         assert macro_from_list(macro_to_list([])) == []

@@ -13,6 +13,10 @@ from win32_utils import get_window_at_point
 
 logger = logging.getLogger(__name__)
 
+# Auto-stop the recorder after this many seconds of no observed mouse/keyboard
+# events. Limits accidental capture if the user forgets to press Stop.
+_IDLE_AUTOSTOP_SECONDS = 60.0
+
 _MODIFIER_KEYS = frozenset({
     Key.ctrl, Key.ctrl_l, Key.ctrl_r,
     Key.shift, Key.shift_l, Key.shift_r,
@@ -61,6 +65,7 @@ class MacroRecorder:
         self._keyboard_listener: KeyboardListener | None = None
         self._lock = threading.Lock()
         self._stopped = False
+        self._idle_timer: threading.Timer | None = None
 
     def start(self) -> None:
         self._stopped = False
@@ -75,6 +80,7 @@ class MacroRecorder:
         )
         self._mouse_listener.start()
         self._keyboard_listener.start()
+        self._reset_idle_timer()
 
     def stop(self) -> None:
         with self._lock:
@@ -82,11 +88,34 @@ class MacroRecorder:
                 return
             self._stopped = True
             steps_snapshot = list(self._steps)
+            if self._idle_timer is not None:
+                self._idle_timer.cancel()
+                self._idle_timer = None
         if self._mouse_listener:
             self._mouse_listener.stop()
         if self._keyboard_listener:
             self._keyboard_listener.stop()
         self._on_done(steps_snapshot)
+
+    # ------------------------------------------------------------------
+    def _reset_idle_timer(self) -> None:
+        """Restart the idle countdown. Called on every observed event so the
+        timer only fires once activity has truly stopped for the configured
+        window (default 60 s)."""
+        if self._idle_timer is not None:
+            self._idle_timer.cancel()
+        self._idle_timer = threading.Timer(_IDLE_AUTOSTOP_SECONDS, self._on_idle_timeout)
+        self._idle_timer.daemon = True
+        self._idle_timer.start()
+
+    def _on_idle_timeout(self) -> None:
+        if self._stopped:
+            return
+        logger.info(
+            "Macro recorder auto-stopped after %.0fs of idle time",
+            _IDLE_AUTOSTOP_SECONDS,
+        )
+        self.stop()
 
     # ------------------------------------------------------------------
     def _record_sleep(self) -> None:
@@ -95,6 +124,8 @@ class MacroRecorder:
         if gap_ms > _SLEEP_THRESHOLD_MS:
             self._steps.append(SleepStep(duration_ms=gap_ms))
         self._last_event_time = now
+        # Activity observed → reset the auto-stop window.
+        self._reset_idle_timer()
 
     def _on_click(self, x: int, y: int, button: Button, pressed: bool) -> None:
         if not pressed or self._stopped:

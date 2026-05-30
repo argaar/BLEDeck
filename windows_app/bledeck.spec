@@ -12,6 +12,8 @@ a = Analysis(
     binaries=[],
     datas=[
         ('icon.ico', '.'),
+        ('manual.md', '.'),
+        ('../LICENSE', '.'),
     ],
     hiddenimports=[
         # bleak WinRT backend (not auto-discovered by PyInstaller)

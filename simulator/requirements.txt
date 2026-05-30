@@ -1,0 +1,21 @@
+# Real BLE (Mode B) requires winrt-* packages — installed automatically with bleak.
+# If bleak is not in your venv:  pip install bleak==3.0.2
+#
+# bleak 3.0.2 pulls in (and the simulator uses) the following winrt sub-packages:
+#   winrt-runtime
+#   winrt-windows-devices-bluetooth
+#   winrt-windows-devices-bluetooth-advertisement
+#   winrt-windows-devices-bluetooth-genericattributeprofile
+#   winrt-windows-devices-enumeration
+#   winrt-windows-devices-radios
+#   winrt-windows-foundation
+#   winrt-windows-foundation-collections
+#   winrt-windows-storage-streams
+#
+# ble_server.py imports directly from:
+#   winrt.windows.devices.bluetooth.genericattributeprofile
+#   winrt.windows.storage.streams
+bleak==3.0.2
+
+# Testing
+pytest>=8.0

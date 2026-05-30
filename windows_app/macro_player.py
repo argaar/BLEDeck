@@ -60,15 +60,19 @@ def _resolve_anchor(relative_to: str) -> tuple[int, int] | None:
 
 
 def _resolve_key(key_str: str) -> Any:
-    """Resolve a key string to a pynput Key or a char."""
+    """Resolve a key string to a pynput Key or a single char.
+
+    Rejects multi-character strings that are not in the Key enum — passing
+    them through to pynput silently types the literal string, which can
+    produce surprising output from a tampered macro definition.
+    """
     try:
         return Key[key_str.lower()]
     except KeyError:
         pass
     if len(key_str) == 1:
         return key_str
-    logger.warning("Unknown key %r, treating as char", key_str)
-    return key_str
+    raise ValueError(f"Invalid macro key: {key_str!r}")
 
 
 def play(steps: list[MacroStep]) -> None:

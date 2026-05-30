@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bledeck"
+version = "0.2.6"
+description = "BLE macro pad — Windows control panel, ESP32 firmware, in-process simulator."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{name = "argaar"}]
+license = {text = "MIT"}
+
+dependencies = [
+    "bleak==3.0.2",
+    "PyQt5==5.15.11",
+    "qasync==0.28.0",
+    "pynput==1.8.2",
+    "markdown==3.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3,<9",
+    "pytest-asyncio>=0.24,<1",
+    "pytest-benchmark>=4,<6",
+]
+build = [
+    "pyinstaller>=6.0",
+]
+
+[project.scripts]
+bledeck-decode = "debug.protocol_decoder:main"
+
+[project.urls]
+Homepage = "https://github.com/argaar/BLEDeck"
+Documentation = "https://github.com/argaar/BLEDeck/tree/main/docs"
+
+# Hatchling needs to know which directories are packages. `windows_app` and
+# `simulator` are not under a `src/` layout, so list them explicitly.
+[tool.hatch.build.targets.wheel]
+packages = ["windows_app", "simulator", "debug"]
+
+# Pytest discovery — both test trees, asyncio mode, markers.
+[tool.pytest.ini_options]
+testpaths = ["windows_app/tests", "simulator/tests"]
+# Benchmarks are deselected by default; run them explicitly with
+# `pytest -m benchmark`. The marker declaration alone does not skip them —
+# the addopts deselection does.
+addopts = "-m 'not benchmark'"
+markers = [
+    "benchmark: microbenchmark; requires pytest-benchmark, run via `pytest -m benchmark`",
+]
+asyncio_mode = "auto"

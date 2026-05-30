@@ -19,9 +19,13 @@ class TestActionRunnerCommand:
         runner = self._make_runner()
         logs = []
         key_data = {"action_type": "command", "command": "notepad.exe"}
-        with patch("action_runner.subprocess.Popen") as mock_popen:
+        with patch("action_runner.shutil.which", return_value="/fake/notepad.exe"), \
+             patch("action_runner.Path") as mock_path, \
+             patch("action_runner.subprocess.Popen") as mock_popen:
+            mock_path.return_value.is_file.return_value = True
             mock_popen.return_value = MagicMock()
             runner.run(key_data, key_id=0, profile_index=0, log_fn=logs.append)
+            time.sleep(0.2)
         assert any("notepad.exe" in m for m in logs)
 
     def test_empty_command_logs_warning(self):
@@ -33,9 +37,13 @@ class TestActionRunnerCommand:
     def test_missing_action_type_defaults_to_command(self):
         runner = self._make_runner()
         logs = []
-        with patch("action_runner.subprocess.Popen") as mock_popen:
+        with patch("action_runner.shutil.which", return_value="/fake/calc.exe"), \
+             patch("action_runner.Path") as mock_path, \
+             patch("action_runner.subprocess.Popen") as mock_popen:
+            mock_path.return_value.is_file.return_value = True
             mock_popen.return_value = MagicMock()
             runner.run({"command": "calc.exe"}, key_id=1, profile_index=0, log_fn=logs.append)
+            time.sleep(0.2)
         assert any("calc.exe" in m for m in logs)
 
     def test_reentrancy_guard_command(self):
@@ -54,9 +62,47 @@ class TestActionRunnerCommand:
     def test_command_popen_exception_logged(self):
         runner = self._make_runner()
         logs = []
-        with patch("action_runner.subprocess.Popen", side_effect=OSError("boom")):
+        with patch("action_runner.shutil.which", return_value="/fake/bad.exe"), \
+             patch("action_runner.Path") as mock_path, \
+             patch("action_runner.subprocess.Popen", side_effect=OSError("boom")):
+            mock_path.return_value.is_file.return_value = True
             runner.run({"command": "bad"}, 0, 0, logs.append)
+            time.sleep(0.2)
         assert any("Command failed" in m for m in logs)
+
+    def test_unresolvable_executable_logs_not_found(self):
+        runner = self._make_runner()
+        logs = []
+        with patch("action_runner.shutil.which", return_value=None), \
+             patch("action_runner.Path") as mock_path, \
+             patch("action_runner.subprocess.Popen") as mock_popen:
+            mock_path.return_value.is_file.return_value = False
+            runner.run({"command": "nonexistent.exe"}, 0, 0, logs.append)
+            time.sleep(0.2)
+            mock_popen.assert_not_called()
+        assert any("Executable not found" in m for m in logs)
+
+    def test_shell_metacharacters_not_expanded(self):
+        """Critical: tampered profiles.json must not chain commands via shell ops."""
+        runner = self._make_runner()
+        logs = []
+        # `calc & del *.*` — under shell=True this would chain; under shell=False
+        # the entire string is tokenized and resolver looks up "calc" as exe.
+        with patch("action_runner.shutil.which", return_value="/fake/calc.exe"), \
+             patch("action_runner.Path") as mock_path, \
+             patch("action_runner.subprocess.Popen") as mock_popen:
+            mock_path.return_value.is_file.return_value = True
+            mock_popen.return_value = MagicMock()
+            runner.run({"command": "calc & del *.*"}, 0, 0, logs.append)
+            time.sleep(0.2)
+            args, kwargs = mock_popen.call_args
+            argv = args[0]
+            # Must call as argv list, not shell string
+            assert isinstance(argv, list)
+            assert kwargs.get("shell") is False
+            # `&` and `del` must appear as literal args, not as a chained command
+            assert "&" in argv
+            assert "del" in argv
 
 
 class TestActionRunnerMacro:

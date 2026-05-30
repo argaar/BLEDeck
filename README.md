@@ -22,7 +22,7 @@ The device carries no persistent state. Every time the app connects, it pushes t
 | Display | SSD1306 128×64 OLED |
 | Encoder | EC11 rotary encoder with push button |
 | Extra buttons | CON (confirm) + BACK, mounted beside the encoder |
-| Battery | Optional 1S LiPo with 15 kΩ / 4.7 kΩ voltage divider on GPIO 13 |
+| Battery | Optional 1S LiPo with 15 kΩ / 4.3 kΩ voltage divider on GPIO 13 |
 | PCB | Custom KiCad design, v1.1 (files under `pcb/`) |
 
 ---
@@ -44,19 +44,30 @@ BLEDeck/
 │   ├── main.py                 BLEDeck GUI, BLE lifecycle, notification dispatch
 │   ├── key_button.py           KeyButton widget
 │   ├── ble_protocol.py         Packet builders, parsers, opcode constants
-│   ├── ble_client.py           BleakClient re-export + BLE UUIDs
+│   ├── ble_client.py           BleakClient re-export, BLE UUIDs, simulator factory
 │   ├── profile_manager.py      Load/save profiles.json
+│   ├── app_settings.py         Persistent app-level settings (preferred device MAC, …)
 │   ├── action_runner.py        Command/macro dispatch with re-entrancy guard
 │   ├── macro_models.py         Immutable step types + JSON serialization
 │   ├── macro_recorder.py       pynput-based recorder with window anchor detection
 │   ├── macro_player.py         Synchronous macro playback
 │   ├── macro_dialog.py         MacroDialog QDialog (record, edit, reorder, test)
 │   ├── win32_utils.py          Windows API helpers (window/monitor detection)
-│   └── tests/                  Pytest suite (111 tests)
+│   └── tests/                  Pytest suite
 │       ├── test_ble_protocol.py
 │       ├── test_profile_manager.py
 │       ├── test_action_runner.py
 │       └── test_macro_models.py
+├── simulator/         BLE device simulator (no hardware needed)
+│   ├── __main__.py             Entry point: python -m simulator [--ble]
+│   ├── _context.py             Module-level singletons (DeviceState, active client)
+│   ├── device_state.py         Simulated device state
+│   ├── command_handler.py      PC→Device command handler
+│   ├── event_emitter.py        Device→PC event builders
+│   ├── ble_server.py           Real BLE via WinRT GattServiceProvider (Mode B)
+│   ├── fake_bleak_client.py    In-process loopback (Mode A)
+│   ├── cli.py                  Interactive REPL
+│   └── tests/                  Pytest suite
 ├── pcb/               KiCad schematic + layout + Gerbers
 ├── docs/              Protocol reference and debugging guides
 │   ├── ble_protocol_reference.md
@@ -83,6 +94,8 @@ Full setup and configuration details: [`firmware/README.md`](firmware/README.md)
 - **Battery monitoring** - ADC reading every 30 s, 5-sample rolling average, reported to the app via opcode `0x85`
 - **Workstation lock** - when locked by the app, the OLED dims and shows a lock icon; all key events are suppressed
 - **OTA updates** - long-press the encoder push button to open the settings menu, select *OTA Update*; the device connects to WiFi (or falls back to an AP) and serves the ElegantOTA web UI
+- **`OP_HELLO` / `OP_DEVICE_TELEMETRY` handshake** - on connect the app sends `OP_HELLO` with its protocol/app version, the device replies with telemetry (firmware version, uptime, free heap, BLE error count)
+- **OTA HTTP auth rate-limit infrastructure** - 5 failed logins within 60 s trigger a 5-minute lockout (trigger awaits an ElegantOTA upstream hook)
 
 ### Firmware Setup
 
@@ -91,7 +104,7 @@ Full setup and configuration details: [`firmware/README.md`](firmware/README.md)
    ```cpp
    #define OTA_WIFI_SSID     "your_ssid"
    #define OTA_WIFI_PASSWORD "your_wifi_password"
-   #define OTA_PASSWORD      "your_ota_password"
+   #define OTA_HTTP_PASSWORD "your_ota_http_password"
    ```
 3. Build and flash:
    ```bash
@@ -119,6 +132,10 @@ Full setup and usage details: [`windows_app/README.md`](windows_app/README.md)
 - **Battery indicator** - displays the battery percentage reported by the device
 - **System tray** - minimises to tray, double-click or single-click to restore
 - On connect: pushes all profile names, then the current profile index + RGB colors
+- **Rotating debug log** at `%APPDATA%\BLEDeck\logs\bledeck.log` (5 × 20 MB rotation, 100 MB cap; KEEP_ALIVE traffic filtered out)
+- **Preferred device MAC pinning** + **exponential reconnect backoff** (10 s → doubles per failed attempt → 5 min cap; resets on success)
+- **High-risk command-token warning** on profile load — flags commands containing tokens such as `powershell`, `cmd /c`, `iex`, `curl … | iex`, `bitsadmin`, `mshta` before they can run
+- **Macro recorder auto-stop** after 60 s of idle keyboard / mouse activity
 
 ### App Setup
 
@@ -128,7 +145,27 @@ pip install -r requirements.txt
 python main.py
 ```
 
-> Python 3.10 or later required. Tested on Windows 11.
+> Python 3.12 or later required. Tested on Windows 11.
+
+### Development Without Hardware
+
+A device simulator is included — no physical BLEDeck required.
+
+Loopback mode (default): no Bluetooth, instant connect. Pick the row for your shell:
+
+| Shell       | Command |
+|-------------|---------|
+| cmd.exe     | `set BLEDECK_SIM=1 && python windows_app\main.py` |
+| PowerShell  | `$env:BLEDECK_SIM=1; python windows_app\main.py` |
+| Git Bash    | `BLEDECK_SIM=1 python windows_app/main.py` |
+
+Real BLE mode (two machines): simulator on Machine A, app on Machine B:
+
+```bash
+python -m simulator --ble
+```
+
+Full details: [`simulator/README.md`](simulator/README.md)
 
 ---
 
@@ -138,8 +175,8 @@ Full reference: [`docs/ble_protocol_reference.md`](docs/ble_protocol_reference.m
 
 | Direction | Opcodes |
 |-----------|---------|
-| PC → Device | `0x01` KEEP_ALIVE, `0x02` CHANGE_PROFILE, `0x03` SYNC_PROFILES, `0x04` SET_RGB_KEY, `0x05` SET_ALL_RGB_KEYS, `0x06` LOCK_DEVICE |
-| Device → PC | `0x81` KEEP_ALIVE_REPLY, `0x82` PROFILE_CHANGED, `0x83` BUTTON_PRESSED, `0x84` KEY_PRESSED, `0x85` BATTERY_STATUS |
+| PC → Device | `0x01` KEEP_ALIVE, `0x02` CHANGE_PROFILE, `0x03` SYNC_PROFILES, `0x04` SET_RGB_KEY, `0x05` SET_ALL_RGB_KEYS, `0x06` LOCK_DEVICE, `0x07` HELLO |
+| Device → PC | `0x81` KEEP_ALIVE_REPLY, `0x82` PROFILE_CHANGED, `0x83` BUTTON_PRESSED, `0x84` KEY_PRESSED, `0x85` BATTERY_STATUS, `0x86` DEVICE_TELEMETRY |
 
 To decode a raw packet from the log:
 ```bash
@@ -203,4 +240,6 @@ Ideally you need to assemble parts in the order:
 
 ## License
 
-Hardware design files (PCB, schematics) and third-party component symbols/footprints retain their original licenses as listed in [`pcb/README.md`](pcb/README.md). Firmware and app source code are provided as-is for personal use.
+Firmware and application source code are licensed under the [MIT License](LICENSE).
+
+Hardware design files (PCB, schematics) and third-party component symbols/footprints retain their original licenses as listed in [`pcb/README.md`](pcb/README.md). The custom `oledknob.step` footprint is non-commercial use only.

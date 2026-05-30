@@ -12,6 +12,33 @@ The protocol is designed to be compact, binary, and easy to parse on resource-li
 
 This version of the protocol uses **no acknowledgments**, as BLE handles transport-level reliability.
 
+## 1.1 Pairing & Encryption
+
+Both GATT characteristics require an encrypted, MITM-authenticated link:
+
+- TX (notify) — `ESP_GATT_PERM_READ_ENC_MITM`
+- RX (write)  — `ESP_GATT_PERM_WRITE_ENC_MITM`
+
+Pairing flow on first connect:
+
+1. Host (Windows app) initiates pairing through the OS BLE stack.
+2. Device displays a 6-digit passkey on its OLED.
+3. User types the passkey into the OS pairing prompt.
+4. Bond is stored in NVS and reused on subsequent connects.
+
+Without an active bond, GATT writes are rejected by the controller before the application layer sees them. This blocks unauthenticated centrals from sending `LOCK_DEVICE`, `CHANGE_PROFILE`, or RGB commands.
+
+## 1.2 Transport
+
+| Item | Value |
+|------|-------|
+| Device name | `BLEDeck` |
+| Service UUID | `4FAFC201-1FB5-459E-8FCC-C5C9C331914B` |
+| TX characteristic (Device → PC, NOTIFY) | `BEB5483E-36E1-4688-B7F5-EA07361B26A8` |
+| RX characteristic (PC → Device, WRITE)  | `EAB5483E-36E1-4688-B7F5-EA07361B26A9` |
+
+TX uses notify (device pushes events). RX uses write-without-response (PC pushes commands).
+
 ---
 
 # 2. Packet Structure
@@ -38,11 +65,12 @@ All packets follow this structure:
 | Opcode | Name | Description |
 |--------|------|-------------|
 | `0x01` | Keep Alive | Ping packet used to keep BLE connection active |
-| `0x02` | Change Profile | Sends complete profile data (name + 16 RGBW keys) |
+| `0x02` | Change Profile | Notifies device of active profile (index + name) |
 | `0x03` | Sync Profiles | Sends a dictionary of available profiles |
 | `0x04` | Set RGB Key | Sets RGBW value for a single key |
 | `0x05` | Set All RGB Keys | Sets RGBW values for all 16 keys at once |
 | `0x06` | Lock / Unlock Device | Locks or unlocks device functionality |
+| `0x07` | Hello | Protocol-version handshake sent immediately after notify subscription |
 
 ## 3.2 Arduino → Python (Events)
 | Opcode | Name | Description |
@@ -52,6 +80,7 @@ All packets follow this structure:
 | `0x83` | Button Pressed | Arduino notifies that a button was pressed |
 | `0x84` | Key Pressed | Arduino notifies that a keypad key was pressed |
 | `0x85` | Battery Status | Arduino reports current battery level (sent after each ADC reading, ~every 30 s) |
+| `0x86` | Device Telemetry | Arduino replies to `HELLO` with firmware/protocol version + runtime stats |
 
 *(No lock event exists; locking is one-way as requested.)*
 
@@ -68,18 +97,10 @@ Packet:
 AA 01 00 00
 ```
 
-### 4.1.1 Keep Alive Reply - `0x81`
-**Payload:** none
-
-Packet:
-```
-AA 81 00 00
-```
-
 ---
 
 ## 4.2 Change Profile - `0x02`
-Sends complete profile data including name and 16 RGBW values.
+Notifies the device that the active profile has changed and provides its display name.
 
 ### Payload Structure
 ```
@@ -87,22 +108,15 @@ Sends complete profile data including name and 16 RGBW values.
 | profile_index 1B |
 | name_length   1B |
 | name       ...   |
-| key0 R G B W     |
-| key1 R G B W     |
-| ...              |
-| key15 R G B W    |
 +------------------+
 ```
 
 - `profile_index` - integer 1..255
 - `name_length` - length of profile name in bytes
 - `name` - UTF-8 encoded string
-- `keys` - 16 × RGBW values (each 4 bytes)
 
-Each RGBW:
-```
-R(1B), G(1B), B(1B), W(1B)
-```
+> RGB colors are pushed separately via `SET_ALL_RGB_KEYS` (0x05) following the
+> profile switch — that is the actual connection bootstrap sequence.
 
 ---
 
@@ -190,7 +204,48 @@ AA 06 00 01  01
 
 ---
 
-## 4.7 Profile Changed (Arduino → Python) - `0x82`
+## 4.7 Hello - `0x07`
+Protocol-version handshake. Sent by the host immediately after it finishes subscribing to the TX notify characteristic, **before** any other command is issued.
+
+### Payload Structure
+```
++----------------------+
+| protocol_version 1B  |
+| app_version_len  1B  |
+| app_version      ... |
++----------------------+
+```
+
+- `protocol_version` - currently `0x01` (see `PROTOCOL_VERSION` constant in `windows_app/ble_protocol.py` and `firmware/src/protocolparser.h`)
+- `app_version_len` - length of the host application version string (bytes)
+- `app_version` - UTF-8 encoded semver string, e.g. `"0.2.3"`
+
+### Behaviour
+Upon receipt the firmware replies with `OP_DEVICE_TELEMETRY` (`0x86`) carrying its own protocol version, firmware version, and runtime stats. The host compares `protocol_version` values: a mismatch surfaces a **CRITICAL** entry in the debug log and a warning in the status bar, then continues at the host's risk.
+
+### Mismatch handling
+`PROTOCOL_VERSION` is bumped on **any breaking change** to packet framing or payload layout. Additive changes (new opcode, additional trailing field) do **not** bump the version. Both sides must stay in lockstep — if you change one, change the other.
+
+Example (host v0.2.3, protocol_version=1):
+```
+AA 07 00 07  01 05 30 2E 32 2E 33
+```
+
+---
+
+# 5. Device → Python Events
+
+## 5.1 Keep Alive Reply - `0x81`
+**Payload:** none
+
+Packet:
+```
+AA 81 00 00
+```
+
+---
+
+## 5.2 Profile Changed - `0x82`
 Sent when the user switches profile on the device.
 
 ### Payload Structure
@@ -202,7 +257,7 @@ Sent when the user switches profile on the device.
 
 ---
 
-## 4.8 Button Pressed (Arduino → Python) - `0x83`
+## 5.3 Button Pressed - `0x83`
 Sent when a button (CON, BACK, PUSH) is pressed on the device.
 
 ### Payload Structure
@@ -220,7 +275,7 @@ Sent when a button (CON, BACK, PUSH) is pressed on the device.
 
 ---
 
-## 4.9 Key Pressed (Arduino → Python) - `0x84`
+## 5.4 Key Pressed - `0x84`
 Sent when a keypad key (0-9, A-F) is pressed on the device.
 
 ### Payload Structure
@@ -236,7 +291,7 @@ Sent when a keypad key (0-9, A-F) is pressed on the device.
 
 ---
 
-## 4.10 Battery Status (Arduino → Python) - `0x85`
+## 5.5 Battery Status - `0x85`
 Sent automatically after each ADC battery reading (~every 30 s) while a host is connected.
 
 ### Payload Structure
@@ -260,16 +315,58 @@ AA 85 00 01  FF
 
 ---
 
-# 5. Encoding Notes
+## 5.6 Device Telemetry - `0x86`
+Reply to `OP_HELLO` (`0x07`). Carries the firmware's protocol version, firmware version string, and runtime statistics. Sent once per handshake; not periodic.
+
+### Payload Structure
+```
++------------------------+
+| protocol_version    1B |
+| fw_version_len      1B |
+| firmware_version   ... |
+| uptime_ms           4B |   (big-endian uint32)
+| reset_reason        1B |
+| free_heap           4B |   (big-endian uint32)
+| ble_error_count     2B |   (big-endian uint16)
++------------------------+
+```
+
+### Fields
+
+- `protocol_version` - device-side `PROTOCOL_VERSION` constant; compared against the host's value from `OP_HELLO`. Mismatch ⇒ host logs a CRITICAL warning.
+- `fw_version_len` - length of `firmware_version` in bytes.
+- `firmware_version` - UTF-8 semver string (e.g. `"1.2.3"`), from `firmware/src/version.h`.
+- `uptime_ms` - milliseconds since boot, big-endian uint32. Wraps at ~49.7 days.
+- `reset_reason` - byte mirroring `esp_reset_reason()`:
+  - `0` = unknown
+  - `1` = power-on
+  - `3` = software reset
+  - `5` = deep-sleep wake
+  - `6` = brownout
+  - `8` = task watchdog
+  - `9` = interrupt watchdog
+  - (full set: ESP-IDF `esp_reset_reason_t` docs)
+- `free_heap` - free heap in bytes at the moment of telemetry, big-endian uint32.
+- `ble_error_count` - count of malformed packets, send failures, and oversize-payload rejections since boot, big-endian uint16. A sudden spike points to radio interference or app/firmware-version drift — investigate before suspecting other layers.
+
+Example (fw `1.2.3`, uptime 5000 ms, reset_reason=1 power-on, free_heap=200000, ble_error_count=0):
+```
+AA 86 00 12  01 05 31 2E 32 2E 33  00 00 13 88  01  00 03 0D 40  00 00
+```
+
+---
+
+# 6. Encoding Notes
 - All numbers are unsigned.
 - All multi-byte values are big-endian.
 - Strings use UTF-8 encoding.
 - BLE characteristics should be configured for **binary** (not hex or text) transfer.
-- No checksums are required since BLE guarantees delivery and integrity.
+- No checksums are required since BLE guarantees delivery and integrity. Application-layer recovery relies on the `0xAA` start byte; the parser silently discards any bytes received outside a valid frame.
+- `PROTOCOL_VERSION` (currently `1`) is the single-byte version constant exchanged in `OP_HELLO` / `OP_DEVICE_TELEMETRY`. **Bump policy:** increment on any breaking change to packet framing or payload layout. Additive changes (new opcode, new trailing field on an existing opcode) do **not** bump the version. The constant is defined in both `windows_app/ble_protocol.py` and `firmware/src/protocolparser.h` — keep them in lockstep.
 
 ---
 
-# 6. Design Conventions
+# 7. Design Conventions
 - Opcodes below `0x80` are **commands**.
 - Opcodes above `0x80` are **events**.
 - `0xAA` is used as a constant start byte for easy packet framing.
@@ -278,12 +375,11 @@ AA 85 00 01  FF
 
 ---
 
-# 7. Versioning
-This document describes **Protocol Version 1.0**.
-If future changes are introduced, a new opcode (`0x7F`) may be added for version negotiation.
+# 8. Versioning
+This document describes **Protocol Version 1** (`PROTOCOL_VERSION = 1`). Version negotiation is implemented via `OP_HELLO` (`0x07`) → `OP_DEVICE_TELEMETRY` (`0x86`); see §4.7 and §5.6. See §6 for bump policy.
 
 ---
 
-# 8. License
+# 9. License
 This specification may be shared and published publicly.
 

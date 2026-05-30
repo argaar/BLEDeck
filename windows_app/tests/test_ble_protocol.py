@@ -4,6 +4,8 @@ import struct
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import ble_protocol
@@ -290,13 +292,64 @@ class TestSyncProfilesEdgeCases:
         assert payload[0] == 3
 
 
+class TestParserLengthGuards:
+    def test_profile_changed_empty_payload(self):
+        import pytest
+        with pytest.raises(ValueError, match="too short"):
+            ble_protocol.parse_profile_changed(b'')
+
+    def test_button_pressed_empty_payload(self):
+        import pytest
+        with pytest.raises(ValueError, match="too short"):
+            ble_protocol.parse_button_pressed(b'')
+
+    def test_button_pressed_one_byte(self):
+        import pytest
+        with pytest.raises(ValueError, match="too short"):
+            ble_protocol.parse_button_pressed(b'\x00')
+
+    def test_button_pressed_name_len_overruns(self):
+        import pytest
+        # name_len = 10 but only 3 bytes of name available → truncated
+        with pytest.raises(ValueError, match="truncated"):
+            ble_protocol.parse_button_pressed(b'\x00\x0aABC')
+
+    def test_key_pressed_empty_payload(self):
+        import pytest
+        with pytest.raises(ValueError, match="too short"):
+            ble_protocol.parse_key_pressed(b'')
+
+    def test_key_pressed_one_byte(self):
+        import pytest
+        with pytest.raises(ValueError, match="too short"):
+            ble_protocol.parse_key_pressed(b'\x00')
+
+    def test_battery_status_empty_payload(self):
+        import pytest
+        with pytest.raises(ValueError, match="too short"):
+            ble_protocol.parse_battery_status(b'')
+
+
 class TestBLEPacketParse:
-    def test_truncated_payload_returns_partial(self):
-        # Packet declares 4 bytes but only 2 are present — parse reads what's there
+    def test_truncated_payload_rejected(self):
+        # Packet declares 4 bytes but only 2 are present — parser now rejects.
         raw = b'\xaa\x85\x00\x04\x01\x02'
-        opcode, payload = ble_protocol.BLEPacket.parse(raw)
-        assert opcode == 0x85
-        assert payload == b'\x01\x02'  # only bytes available
+        with pytest.raises(ValueError, match="Truncated"):
+            ble_protocol.BLEPacket.parse(raw)
+
+    def test_payload_length_at_cap_accepted(self):
+        # 256 byte payload (the cap) is allowed.
+        payload = b'\xab' * ble_protocol.MAX_PAYLOAD_LEN
+        raw = bytes([0xAA, 0x05, 0x01, 0x00]) + payload  # length = 0x0100 = 256
+        opcode, parsed = ble_protocol.BLEPacket.parse(raw)
+        assert opcode == 0x05
+        assert parsed == payload
+
+    def test_payload_length_above_cap_rejected(self):
+        # length field = 257 → reject without inspecting buffer contents.
+        raw = bytes([0xAA, 0x05, 0x01, 0x01]) + b'\x00' * 257
+        with pytest.raises(ValueError, match="MAX_PAYLOAD_LEN"):
+            ble_protocol.BLEPacket.parse(raw)
 
     def test_extra_trailing_bytes_ignored(self):
         raw = b'\xaa\x01\x00\x00\xff\xff\xff'
@@ -309,3 +362,47 @@ class TestBLEPacketParse:
         opcode, payload = ble_protocol.BLEPacket.parse(raw)
         assert opcode == 0x01
         assert payload == b''
+
+
+class TestHelloAndTelemetry:
+    def test_hello_builder_known_bytes(self):
+        # app_version "1.2.3" → header AA 07 00 07,
+        # payload = protocol_version(1=0x01) + len(5=0x05) + "1.2.3"
+        packet = ble_protocol.hello("1.2.3")
+        assert packet == b'\xaa\x07\x00\x07\x01\x05' + b'1.2.3'
+
+    def test_hello_constants_exposed(self):
+        assert ble_protocol.OP_HELLO == 0x07
+        assert ble_protocol.OP_DEVICE_TELEMETRY == 0x86
+        assert ble_protocol.PROTOCOL_VERSION == 1
+
+    def test_device_telemetry_parser_roundtrip(self):
+        fw = "1.0.0"
+        fw_bytes = fw.encode("utf-8")
+        payload = bytes([1, len(fw_bytes)]) + fw_bytes
+        payload += (123456).to_bytes(4, "big")   # uptime_ms
+        payload += bytes([7])                    # reset_reason
+        payload += (200000).to_bytes(4, "big")   # free_heap
+        payload += (42).to_bytes(2, "big")       # ble_error_count
+
+        result = ble_protocol.parse_device_telemetry(payload)
+        assert result == {
+            "protocol_version": 1,
+            "firmware_version": "1.0.0",
+            "uptime_ms": 123456,
+            "reset_reason": 7,
+            "free_heap": 200000,
+            "ble_error_count": 42,
+        }
+
+    def test_device_telemetry_truncated_rejected(self):
+        # Declares 5-byte firmware version but payload ends right after it,
+        # missing uptime/reset/heap/errors.
+        fw_bytes = b"1.0.0"
+        truncated = bytes([1, len(fw_bytes)]) + fw_bytes
+        with pytest.raises(ValueError, match="truncated"):
+            ble_protocol.parse_device_telemetry(truncated)
+
+    def test_device_telemetry_too_short_header(self):
+        with pytest.raises(ValueError, match="too short"):
+            ble_protocol.parse_device_telemetry(b'\x01')

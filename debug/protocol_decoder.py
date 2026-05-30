@@ -7,8 +7,18 @@ This script decodes binary packets from the BLEDeck protocol and explains all op
 import struct
 import sys
 
+# Force UTF-8 on stdout/stderr so the unicode glyphs below (✓, ➤, ❌)
+# render correctly on Windows consoles defaulting to cp1252.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8")
+        except (OSError, ValueError):
+            pass
+
 # Protocol constants
 START_BYTE = 0xAA
+PROTOCOL_VERSION = 1
 
 # Opcodes - Commands (Python → Arduino)
 OP_KEEP_ALIVE        = 0x01
@@ -17,6 +27,7 @@ OP_SYNC_PROFILES     = 0x03
 OP_SET_RGB_KEY       = 0x04
 OP_SET_ALL_RGB_KEYS  = 0x05
 OP_LOCK_DEVICE       = 0x06
+OP_HELLO             = 0x07
 
 # Opcodes - Events (Arduino → Python)
 OP_KEEP_ALIVE_REPLY  = 0x81
@@ -24,6 +35,7 @@ OP_PROFILE_CHANGED   = 0x82
 OP_BUTTON_PRESSED    = 0x83
 OP_KEY_PRESSED       = 0x84
 OP_BATTERY_STATUS    = 0x85
+OP_DEVICE_TELEMETRY  = 0x86
 
 OPCODE_NAMES = {
     0x01: "KEEP_ALIVE",
@@ -32,11 +44,24 @@ OPCODE_NAMES = {
     0x04: "SET_RGB_KEY",
     0x05: "SET_ALL_RGB_KEYS",
     0x06: "LOCK_DEVICE",
+    0x07: "HELLO",
     0x81: "KEEP_ALIVE_REPLY",
     0x82: "PROFILE_CHANGED",
     0x83: "BUTTON_PRESSED",
     0x84: "KEY_PRESSED",
     0x85: "BATTERY_STATUS",
+    0x86: "DEVICE_TELEMETRY",
+}
+
+# esp_reset_reason() values (subset — see ESP-IDF docs for full set)
+RESET_REASON_NAMES = {
+    0: "UNKNOWN",
+    1: "POWERON",
+    3: "SW",
+    5: "DEEPSLEEP",
+    6: "BROWNOUT",
+    8: "TASK_WDT",
+    9: "INT_WDT",
 }
 
 def decode_packet(hex_string):
@@ -120,7 +145,7 @@ def decode_payload(opcode, payload):
 
         profile_idx = payload[0]
         name_len = payload[1]
-        print(f"    Profile Index: {profile_idx} (device uses 1-based, converts to {profile_idx-1} internally)")
+        print(f"    Profile Index: {profile_idx} (1-based, per protocol)")
         print(f"    Name Length: {name_len} bytes")
 
         if len(payload) < 2 + name_len:
@@ -129,21 +154,6 @@ def decode_payload(opcode, payload):
 
         name = payload[2:2+name_len].decode("utf-8", errors="replace")
         print(f"    Profile Name: '{name}'")
-
-        # RGB colors
-        offset = 2 + name_len
-        colors_data = payload[offset:]
-        expected_colors = 64  # 16 keys × 4 bytes
-
-        print(f"    RGB Colors: {len(colors_data)} bytes (expected {expected_colors})")
-        if len(colors_data) >= expected_colors:
-            print("    Key Colors (RGBW):")
-            for i in range(16):
-                idx = i * 4
-                r, g, b, w = colors_data[idx:idx+4]
-                print(f"      Key {i:2d}: R={r:3d}, G={g:3d}, B={b:3d}, W={w:3d}")
-        else:
-            print("    ⚠️  Insufficient color data")
 
     elif opcode == OP_SYNC_PROFILES:
         print("  ➤ Sync Profiles")
@@ -206,6 +216,26 @@ def decode_payload(opcode, payload):
         status = "LOCKED" if lock_flag == 1 else "UNLOCKED"
         print(f"    Lock Flag: 0x{lock_flag:02X} = {status}")
 
+    elif opcode == OP_HELLO:
+        print("  ➤ Hello (Protocol Handshake)")
+        if len(payload) < 2:
+            print("    ❌ Payload too short (need protocol_version + name_len)")
+            return
+
+        proto_ver = payload[0]
+        name_len = payload[1]
+        print(f"    Protocol Version: {proto_ver}")
+
+        if len(payload) < 2 + name_len:
+            print(f"    ❌ Payload too short for app version (need {name_len} bytes)")
+            return
+
+        app_ver = payload[2:2 + name_len].decode("utf-8", errors="replace")
+        print(f"    App Version: '{app_ver}'")
+
+        if proto_ver != PROTOCOL_VERSION:
+            print(f"    ⚠️  Mismatch: decoder expects PROTOCOL_VERSION={PROTOCOL_VERSION}")
+
     elif opcode == OP_PROFILE_CHANGED:
         print("  ➤ Profile Changed (Device Event)")
         if len(payload) < 1:
@@ -258,6 +288,47 @@ def decode_payload(opcode, payload):
             print(f"    Battery: {pct}%")
             print(f"    Level  : [{bar}]")
 
+    elif opcode == OP_DEVICE_TELEMETRY:
+        print("  ➤ Device Telemetry (Device Event)")
+        # Minimum = pv(1) + fvlen(1) + uptime(4) + reset(1) + heap(4) + ble_err(2) = 13 (empty fw version)
+        if len(payload) < 2:
+            print("    ❌ Payload too short (need protocol_version + fw_version_len)")
+            return
+
+        proto_ver = payload[0]
+        fw_len = payload[1]
+        offset = 2
+
+        if len(payload) < offset + fw_len + 4 + 1 + 4 + 2:
+            print(f"    ❌ Payload too short for declared fw_version_len={fw_len}")
+            return
+
+        fw_version = payload[offset:offset + fw_len].decode("utf-8", errors="replace")
+        offset += fw_len
+
+        uptime_ms = struct.unpack(">I", payload[offset:offset + 4])[0]
+        offset += 4
+
+        reset_reason = payload[offset]
+        offset += 1
+
+        free_heap = struct.unpack(">I", payload[offset:offset + 4])[0]
+        offset += 4
+
+        ble_error_count = struct.unpack(">H", payload[offset:offset + 2])[0]
+
+        reset_label = RESET_REASON_NAMES.get(reset_reason, "OTHER")
+
+        print(f"    Protocol Version: {proto_ver}")
+        print(f"    Firmware Version: '{fw_version}'")
+        print(f"    Uptime: {uptime_ms} ms ({uptime_ms / 1000:.1f} s)")
+        print(f"    Reset Reason: {reset_reason} ({reset_label})")
+        print(f"    Free Heap: {free_heap} bytes (~{free_heap // 1024} KB)")
+        print(f"    BLE Error Count: {ble_error_count}")
+
+        if proto_ver != PROTOCOL_VERSION:
+            print(f"    ⚠️  Mismatch: decoder expects PROTOCOL_VERSION={PROTOCOL_VERSION}")
+
     else:
         print(f"  ⚠️  Unknown opcode 0x{opcode:02X}")
         if payload:
@@ -273,16 +344,19 @@ def create_test_packets():
     examples = [
         ("Keep Alive", "aa010000"),
         ("Keep Alive Reply", "aa810000"),
-        ("Lock Device (locked)", "aa0600010001"),
-        ("Lock Device (unlocked)", "aa0600010000"),
-        ("Profile Changed (profile 0)", "aa8200010100"),
-        ("Profile Changed (profile 2)", "aa8200010102"),
-        ("Set RGB Key (profile 0, key 5, red)", "aa040006000005ff000000"),
-        ("Sync Profiles (2 profiles)", "aa030009020154657374031044656661756c74"),
-        ("Button Pressed (CON)", "aa83000400030343434e"),
-        ("Key Pressed (key 'A')", "aa840002000141"),
-        ("Battery Status (72%)", "aa850001" + "48"),
+        ("Lock Device (locked)", "aa06000101"),
+        ("Lock Device (unlocked)", "aa06000100"),
+        ("Profile Changed (profile 0)", "aa82000100"),
+        ("Profile Changed (profile 2)", "aa82000102"),
+        ("Set RGB Key (key 5, red 50%)", "aa04000505ff000032"),
+        ("Sync Profiles (Test, Default)", "aa03001002010454657374020744656661756c74"),
+        ("Button Pressed (CON, profile 0)", "aa8300050003434f4e"),
+        ("Key Pressed (key 'A', profile 0)", "aa840002" + "0041"),
+        ("Battery Status (75%)", "aa850001" + "4b"),
         ("Battery Status (USB/none)", "aa850001" + "ff"),
+        ("Hello (app v0.2.3, protocol v1)", "aa0700070105302e322e33"),
+        ("Device Telemetry (fw v1.2.3, uptime 5s, POWERON)",
+         "aa860012" + "0105312e322e33" + "00001388" + "01" + "00030d40" + "0000"),
     ]
 
     for name, hex_data in examples:
@@ -320,7 +394,7 @@ def main():
 
                 decode_packet(user_input)
 
-            except KeyboardInterrupt:
+            except (EOFError, KeyboardInterrupt):
                 print("\n\nExiting...")
                 break
             except Exception as e:

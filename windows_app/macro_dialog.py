@@ -116,6 +116,10 @@ class _Signals(QObject):
 
 
 class MacroDialog(QDialog):
+    # Emitted (queued) when a Test Run thread finishes, so the button can be
+    # safely re-enabled on the GUI thread.
+    test_run_finished = pyqtSignal()
+
     def __init__(self, key_label: str, existing_steps: list[MacroStep],
                  parent=None) -> None:
         super().__init__(parent)
@@ -126,6 +130,8 @@ class MacroDialog(QDialog):
         self._recorder: MacroRecorder | None = None
         self._signals = _Signals()
         self._signals.recording_done.connect(self._on_recording_done)
+        self._test_btn: QPushButton | None = None
+        self.test_run_finished.connect(self._on_test_run_finished)
 
         layout = QVBoxLayout(self)
 
@@ -156,6 +162,7 @@ class MacroDialog(QDialog):
         test_btn = QPushButton("Test Run")
         test_btn.clicked.connect(self._test_run)
         btn_row.addWidget(test_btn)
+        self._test_btn = test_btn
 
         edit_btn = QPushButton("Edit Step")
         edit_btn.clicked.connect(lambda: self._edit_selected())
@@ -236,7 +243,23 @@ class MacroDialog(QDialog):
             QMessageBox.information(self, "No Steps", "Record a macro first.")
             return
         steps = list(self._steps)
-        threading.Thread(target=macro_player.play, args=(steps,), daemon=True).start()
+        if self._test_btn is not None:
+            self._test_btn.setEnabled(False)
+
+        def _worker() -> None:
+            try:
+                macro_player.play(steps)
+            except Exception:
+                logger.exception("Test Run macro playback failed")
+            finally:
+                # Signal is cross-thread safe (queued connection).
+                self.test_run_finished.emit()
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _on_test_run_finished(self) -> None:
+        if self._test_btn is not None:
+            self._test_btn.setEnabled(True)
 
     def _delete_selected(self) -> None:
         row = self._list.currentRow()

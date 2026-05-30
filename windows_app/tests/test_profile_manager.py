@@ -68,7 +68,10 @@ def test_load_profiles_fills_missing_fields(tmp_path, monkeypatch):
 
 
 def test_save_profiles_returns_false_on_error(tmp_path, monkeypatch):
-    test_path = tmp_path / "nonexistent" / "profiles.json"
+    # Create a regular file, then try to treat it as a directory.
+    blocker = tmp_path / "not_a_dir"
+    blocker.write_text("blocker", encoding="utf-8")
+    test_path = blocker / "profiles.json"
     monkeypatch.setattr(profile_manager, "CONFIG_PATH", test_path)
 
     result = profile_manager.save_profiles([{"name": "Fail"}])
@@ -131,6 +134,50 @@ def test_save_profiles_written_as_utf8(tmp_path, monkeypatch):
     profile_manager.save_profiles([{"name": "Ñoño", "keys": {}}])
     raw = test_path.read_bytes()
     assert "Ñoño".encode("utf-8") in raw
+
+
+def test_load_profiles_from_arbitrary_path(tmp_path):
+    custom = tmp_path / "elsewhere" / "my_profiles.json"
+    custom.parent.mkdir(parents=True)
+    custom.write_text(json.dumps([{"name": "Custom", "keys": {"0": {"label": "X"}}}]),
+                      encoding="utf-8")
+
+    profiles = profile_manager.load_profiles_from(custom)
+    assert profiles[0]["name"] == "Custom"
+    assert profiles[0]["keys"]["0"]["label"] == "X"
+
+
+def test_load_profiles_from_fills_missing_fields(tmp_path):
+    custom = tmp_path / "p.json"
+    custom.write_text(json.dumps([{}]), encoding="utf-8")
+
+    profiles = profile_manager.load_profiles_from(custom)
+    assert profiles[0]["name"] == "Unnamed Profile"
+    assert profiles[0]["keys"] == {}
+
+
+def test_load_profiles_from_raises_on_bad_json(tmp_path):
+    custom = tmp_path / "p.json"
+    custom.write_text("not json", encoding="utf-8")
+    import pytest
+    with pytest.raises(ValueError):
+        profile_manager.load_profiles_from(custom)
+
+
+def test_save_profiles_to_arbitrary_path_creates_dirs(tmp_path):
+    target = tmp_path / "new" / "sub" / "out.json"
+    ok = profile_manager.save_profiles_to(target, [{"name": "X", "keys": {}}])
+    assert ok is True
+    assert target.exists()
+    loaded = profile_manager.load_profiles_from(target)
+    assert loaded[0]["name"] == "X"
+
+
+def test_save_profiles_to_returns_false_on_error(tmp_path):
+    blocker = tmp_path / "blocker"
+    blocker.write_text("x", encoding="utf-8")
+    target = blocker / "out.json"
+    assert profile_manager.save_profiles_to(target, [{"name": "X"}]) is False
 
 
 def test_load_multiple_profiles(tmp_path, monkeypatch):

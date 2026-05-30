@@ -1,0 +1,5 @@
+"""Single source of truth for simulator version."""
+SIMULATOR_VERSION = "0.1.2"
+SIMULATOR_VERSION_MAJOR = 0
+SIMULATOR_VERSION_MINOR = 1
+SIMULATOR_VERSION_PATCH = 2
