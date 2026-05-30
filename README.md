@@ -1,6 +1,13 @@
 # BLEDeck
 
+[![Tests](https://github.com/argaar/BLEDeck/actions/workflows/tests.yml/badge.svg)](https://github.com/argaar/BLEDeck/actions/workflows/tests.yml)
+
 A custom BLE macro pad controlled by a Windows desktop application. Press a key, run a command. Switch profile, change context. Everything is driven by the app, the device is a pure peripheral.
+
+<p align="center">
+  <img src="assets/3d_renders/front.png" alt="BLEDeck front render" width="420">
+  <img src="assets/3d_renders/side.png" alt="BLEDeck side render" width="420">
+</p>
 
 ---
 
@@ -24,6 +31,11 @@ The device carries no persistent state. Every time the app connects, it pushes t
 | Extra buttons | CON (confirm) + BACK, mounted beside the encoder |
 | Battery | Optional 1S LiPo with 15 kΩ / 4.3 kΩ voltage divider on GPIO 13 |
 | PCB | Custom KiCad design, v1.1 (files under `pcb/`) |
+
+<p align="center">
+  <img src="assets/3d_renders/keys_with_leds.png" alt="Keys with per-key RGB LEDs" width="420">
+  <img src="assets/3d_renders/hot_swappable_connectors.png" alt="Hot-swappable switch connectors" width="420">
+</p>
 
 ---
 

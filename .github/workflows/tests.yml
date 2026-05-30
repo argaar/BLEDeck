@@ -1,0 +1,74 @@
+name: Tests
+
+# Runs the firmware native (Unity) suite and the Python suites
+# (windows_app + simulator). Triggers:
+#   - manual dispatch, with an optional component selector
+#   - every push to main
+#   - every pull request (gate before merge)
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Which suite to run"
+        type: choice
+        default: all
+        options:
+          - all
+          - firmware
+          - python
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  firmware-native:
+    name: Firmware native (Unity)
+    # Skipped only when a manual dispatch explicitly targets the python suite.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == 'firmware' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+          restore-keys: pio-${{ runner.os }}-
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Run native unit tests
+        run: pio test -e native -d firmware
+
+  python-tests:
+    name: Python (windows_app + simulator)
+    # windows-latest is required: pynput, bleak/winrt, and the Win32 ctypes
+    # helpers in windows_app are Windows-only and fail to import elsewhere.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == 'python' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run pytest
+        run: pytest
