@@ -124,6 +124,37 @@ Full setup and configuration details: [`firmware/README.md`](firmware/README.md)
    pio run --target upload
    ```
 
+### Build a personalized firmware via GitHub Actions (no toolchain)
+
+Don't want to install PlatformIO? You can have GitHub build a firmware binary
+with **your own** WiFi + OTA credentials baked in and email it to you. The
+`Build Personalized Firmware` workflow handles it.
+
+1. **Fork** this repository to your own GitHub account (Actions and secrets run
+   under your fork, not the upstream repo).
+2. In your fork, add two repository secrets under
+   **Settings → Secrets and variables → Actions → New repository secret**:
+   - `MAIL_USERNAME` — the Gmail address that sends the build
+   - `MAIL_PASSWORD` — a Gmail [App Password](https://support.google.com/accounts/answer/185833)
+     for that account (requires 2-Step Verification; your normal password will
+     not work)
+3. Open the **Actions** tab → **Build Personalized Firmware** →
+   **Run workflow**, and fill in:
+   - `wifi_ssid`, `wifi_password` — the network the device joins for OTA
+   - `ota_http_password` — the password for the OTA upload page
+   - `recipient_email` — where to send the finished `firmware.bin`
+4. Wait for the run to finish (a few minutes). The compiled `firmware.bin`
+   arrives by email; flash it to the ESP32 with ElegantOTA or `esptool`.
+
+> **Spam note:** the email is sent from a personal Gmail account with an
+> attachment, so it can land in **Spam/Junk**. If it doesn't show up in your
+> inbox within a few minutes, check there and mark it *Not spam*.
+
+> **Privacy note:** the credentials you enter are masked in the build logs and
+> the generated `credentials.h` is deleted at the end of the run, but the
+> finished binary still contains them and travels through Gmail. Use this for
+> personal networks, not shared/sensitive ones.
+
 ---
 
 ## Windows App
