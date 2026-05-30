@@ -1,0 +1,55 @@
+name: Build Windows App
+
+# Packages windows_app into a standalone PyInstaller bundle (build.bat →
+# bledeck.spec). Triggers:
+#   - a published GitHub release: builds and attaches the zip as a release asset
+#   - manual dispatch: builds and uploads the zip as a run artifact only
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write  # required to upload the asset onto the release
+
+jobs:
+  build:
+    name: PyInstaller bundle
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[build]"
+
+      - name: Build
+        working-directory: windows_app
+        shell: cmd
+        run: build.bat
+
+      - name: Package bundle
+        shell: pwsh
+        run: |
+          $zip = "BLEDeck-windows.zip"
+          Compress-Archive -Path windows_app/dist/BLEDeck/* -DestinationPath $zip -Force
+          echo "ZIP=$zip" >> $env:GITHUB_ENV
+
+      - name: Upload run artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BLEDeck-windows
+          path: ${{ env.ZIP }}
+          if-no-files-found: error
+
+      - name: Attach to release
+        if: ${{ github.event_name == 'release' }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" "${{ env.ZIP }}" --clobber
